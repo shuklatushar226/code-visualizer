@@ -19,8 +19,9 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
-      - run: pip install -e packages/tracer-python -e 'packages/backend[dev]'
-      - run: pytest packages/tracer-python packages/backend -v
+      - run: sudo apt-get update && sudo apt-get install -y gdb g++
+      - run: pip install -e packages/tracer-python -e packages/tracer-cpp -e 'packages/backend[dev]'
+      - run: pytest packages/tracer-python packages/tracer-cpp packages/backend -v
 
   node:
     name: Node (unit)
@@ -48,7 +49,8 @@ jobs:
         with:
           node-version: "20"
           cache: npm
-      - run: pip install -e packages/tracer-python -e 'packages/backend[dev]'
+      - run: sudo apt-get update && sudo apt-get install -y gdb g++
+      - run: pip install -e packages/tracer-python -e packages/tracer-cpp -e 'packages/backend[dev]'
       - run: npm ci
       - run: npm run build --workspace=@dsa-viz/trace-schema --workspace=@dsa-viz/visualizer-core
       - run: npx playwright install --with-deps chromium

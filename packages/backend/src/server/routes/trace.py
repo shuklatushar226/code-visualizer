@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import shutil
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from ..config import config
-from ..sandbox import run_python_in_sandbox
+from ..sandbox import run_cpp_in_sandbox, run_python_in_sandbox
 
 router = APIRouter()
 
@@ -22,8 +24,13 @@ def trace(req: TraceRequest):
     if req.language == "python":
         return run_python_in_sandbox(req.source)
     if req.language == "cpp":
-        raise HTTPException(
-            status_code=501,
-            detail="C++ tracing is part of milestone M3 — see docs/ROADMAP.md.",
-        )
+        if not shutil.which("gdb") or not shutil.which("g++"):
+            raise HTTPException(
+                status_code=501,
+                detail=(
+                    "C++ tracing (M3) requires gdb and g++ on PATH. "
+                    "This is typically only available on Linux; see docs/ROADMAP.md."
+                ),
+            )
+        return run_cpp_in_sandbox(req.source)
     raise HTTPException(status_code=400, detail=f"Unsupported language: {req.language}")

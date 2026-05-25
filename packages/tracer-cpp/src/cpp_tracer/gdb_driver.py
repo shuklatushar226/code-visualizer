@@ -76,7 +76,22 @@ class GdbDriver:
     def evaluate(self, expr: str) -> str:
         """Evaluate a C++ expression in the current frame."""
         raw = self._send(f"-data-evaluate-expression {expr!r}")
-        return raw.get("payload", {}).get("value", "")
+        return raw.get("payload", {}).get("value", "") if raw else ""
+
+    def type_of(self, expr: str) -> Optional[str]:
+        """Return the textual type of an expression, or None on failure."""
+        raw = self._send(f"whatis {expr}")
+        if not raw:
+            return None
+        # Console stream output arrives in raw["payload"] as a string like
+        # "type = Node *\n"; non-result records aren't returned by _send so
+        # callers may need to parse the stream channel. Best-effort here.
+        payload = raw.get("payload")
+        if isinstance(payload, dict):
+            txt = payload.get("value") or payload.get("type")
+            if isinstance(txt, str):
+                return txt.replace("type = ", "").strip()
+        return None
 
     # ---------------------------------------------------------------- #
     # internals
@@ -91,11 +106,18 @@ class GdbDriver:
         return None
 
 
-def compile_cpp(source_path: str, output_path: Optional[str] = None) -> str:
+def compile_cpp(
+    source_path: str,
+    output_path: Optional[str] = None,
+    extra_args: Optional[List[str]] = None,
+) -> str:
     """Compile a C++ source file to a debuggable binary."""
     if output_path is None:
         output_path = str(Path(tempfile.mkdtemp()) / "user.bin")
-    cmd = ["g++", "-std=c++17", "-g", "-O0", "-o", output_path, source_path]
+    cmd = ["g++", "-std=c++17", "-g", "-O0"]
+    if extra_args:
+        cmd.extend(extra_args)
+    cmd.extend(["-o", output_path, source_path])
     proc = subprocess.run(cmd, capture_output=True, text=True)
     if proc.returncode != 0:
         raise RuntimeError(f"compilation failed:\n{proc.stderr}")

@@ -13,6 +13,7 @@ dependencies = [
     "uvicorn[standard]>=0.27",
     "pydantic>=2.5",
     "dsa-tracer",
+    "dsa-tracer-cpp",
 ]
 
 [project.optional-dependencies]

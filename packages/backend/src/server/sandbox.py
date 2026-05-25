@@ -37,6 +37,14 @@ res = trace_source(src, stdin="", max_events={max_events})
 sys.stdout.write(json.dumps(res, ensure_ascii=False))
 """
 
+CPP_LAUNCHER = r"""
+import json, sys
+from cpp_tracer import trace_source
+src = sys.stdin.read()
+res = trace_source(src, stdin="", max_events={max_events})
+sys.stdout.write(json.dumps(res, ensure_ascii=False))
+"""
+
 
 def _set_child_limits() -> None:
     def _try(rlimit_name: str, value: tuple[int, int]) -> None:
@@ -57,19 +65,25 @@ def _set_child_limits() -> None:
 
 
 def run_python_in_sandbox(source: str) -> Dict[str, Any]:
-    """Execute the Python tracer on ``source`` in a sandboxed subprocess.
+    """Execute the Python tracer on ``source`` in a sandboxed subprocess."""
+    return _run_sandbox(source, LAUNCHER, "python")
 
-    Returns the parsed trace dict. Raises on hard failures.
+
+def run_cpp_in_sandbox(source: str) -> Dict[str, Any]:
+    """Execute the C++ tracer on ``source`` in a sandboxed subprocess.
+
+    The C++ tracer itself spawns g++ and gdb internally. The wall-clock
+    timeout from the parent still applies, so a misbehaving toolchain
+    won't hang the request.
     """
+    return _run_sandbox(source, CPP_LAUNCHER, "cpp")
+
+
+def _run_sandbox(source: str, launcher_template: str, language: str) -> Dict[str, Any]:
     if len(source.encode("utf-8")) > config.max_source_bytes:
         raise ValueError("source exceeds MAX_SOURCE_BYTES")
 
-    launcher = LAUNCHER.format(max_events=config.max_trace_events)
-
-    # We pipe both: launcher via -c, source via stdin.
-    # Note: -S/-I were dropped because they skip site initialization,
-    # which makes installed packages (including dsa_tracer) unimportable.
-    # The wall-clock timeout and rlimits below remain the sandbox boundary.
+    launcher = launcher_template.format(max_events=config.max_trace_events)
     cmd = [sys.executable, "-c", launcher]
 
     try:
@@ -82,13 +96,12 @@ def run_python_in_sandbox(source: str) -> Dict[str, Any]:
             preexec_fn=_set_child_limits if os.name == "posix" else None,
         )
     except subprocess.TimeoutExpired:
-        return _timeout_trace(source)
+        return _timeout_trace(source, language)
 
     if proc.returncode != 0:
-        # Tracer itself crashed — surface as an error trace.
         return {
             "version": "0.1",
-            "language": "python",
+            "language": language,
             "source": source,
             "stdin": "",
             "stdout": "",
@@ -102,7 +115,7 @@ def run_python_in_sandbox(source: str) -> Dict[str, Any]:
     except json.JSONDecodeError as e:
         return {
             "version": "0.1",
-            "language": "python",
+            "language": language,
             "source": source,
             "stdin": "",
             "stdout": "",
@@ -112,10 +125,10 @@ def run_python_in_sandbox(source: str) -> Dict[str, Any]:
         }
 
 
-def _timeout_trace(source: str) -> Dict[str, Any]:
+def _timeout_trace(source: str, language: str = "python") -> Dict[str, Any]:
     return {
         "version": "0.1",
-        "language": "python",
+        "language": language,
         "source": source,
         "stdin": "",
         "stdout": "",
