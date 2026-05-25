@@ -69,6 +69,48 @@ test("runs the two_sum example via paste and shows the seen dict growing", async
   await expect(page.locator(".dsa-viz-codepane")).toContainText("def two_sum");
 });
 
+test("binary-search example produces a pattern overlay on the array", async ({ page }) => {
+  const src = [
+    "def binary_search(nums, target):",
+    "    lo = 0",
+    "    hi = len(nums) - 1",
+    "    while lo <= hi:",
+    "        mid = (lo + hi) // 2",
+    "        if nums[mid] == target:",
+    "            return mid",
+    "        if nums[mid] < target:",
+    "            lo = mid + 1",
+    "        else:",
+    "            hi = mid - 1",
+    "    return -1",
+    "",
+    "binary_search([1, 3, 5, 7, 9, 11, 13, 15, 17, 19], 13)",
+  ].join("\n");
+
+  await page.goto("/");
+  await page.locator(".editor-textarea").fill(src);
+  await page.getByRole("button", { name: "Run & Visualize" }).click();
+  await expect(page.locator(".dsa-viz-tcounter")).toBeVisible();
+
+  // The binary_search call beats the call-count threshold, so Recursion
+  // auto-selects. Switch to Heap to see the array overlay.
+  await page.locator(".dsa-viz-tabs button", { hasText: "Heap" }).click();
+
+  // Seek roughly into the second iteration; overlay should be active.
+  const slider = page.locator('input[type="range"]');
+  const max = await slider.evaluate((el: HTMLInputElement) => Number(el.max));
+  await slider.evaluate((el: HTMLInputElement, v: number) => {
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!;
+    setter.call(el, String(v));
+    el.dispatchEvent(new Event("input", { bubbles: true }));
+  }, Math.floor(max * 0.4));
+
+  await expect(page.locator(".dsa-viz-array-overlay-label")).toHaveText(
+    /^binary search \[\d+…\d+\]$/,
+  );
+  expect(await page.locator(".dsa-viz-cell.is-mid").count()).toBe(1);
+});
+
 test("recursion tab auto-selects and renders the fib(6) tree", async ({ page }) => {
   const fibSource = [
     "def fib(n):",

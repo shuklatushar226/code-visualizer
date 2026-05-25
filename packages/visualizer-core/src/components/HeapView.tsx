@@ -1,7 +1,8 @@
 import React from "react";
 import type { Frame, HeapObject } from "@dsa-viz/trace-schema";
 import { detectStructure } from "../lib/detectStructure";
-import { ArrayView } from "./structures/ArrayView";
+import type { PatternKind } from "../lib/patterns";
+import { ArrayView, type ArrayOverlay } from "./structures/ArrayView";
 import { LinkedListView } from "./structures/LinkedListView";
 import { TreeView } from "./structures/TreeView";
 import { GraphView } from "./structures/GraphView";
@@ -9,11 +10,17 @@ import { StackView } from "./structures/StackView";
 import { QueueView } from "./structures/QueueView";
 import { HeapTreeView } from "./structures/HeapTreeView";
 
+export interface PatternOverlayState extends ArrayOverlay {
+  arrayLocalName: string;
+}
+
 export interface HeapViewProps {
   heap: Record<string, HeapObject>;
   frame?: Frame;
   /** local-name -> annotation (`linked-list`, `tree`, `graph`, `stack`, ...) */
   annotations: Record<string, string>;
+  /** Active pattern overlay: applied to the array local with the given name. */
+  patternOverlay?: PatternOverlayState | null;
 }
 
 /**
@@ -21,7 +28,7 @@ export interface HeapViewProps {
  * heap. Scalars are rendered in the CallStack already, so this view focuses on
  * heap objects worth visualizing as a 2-D structure.
  */
-export const HeapView: React.FC<HeapViewProps> = ({ heap, frame, annotations }) => {
+export const HeapView: React.FC<HeapViewProps> = ({ heap, frame, annotations, patternOverlay }) => {
   if (!frame) return null;
   const entries = Object.entries(frame.locals);
 
@@ -38,13 +45,16 @@ export const HeapView: React.FC<HeapViewProps> = ({ heap, frame, annotations }) 
     <div className="dsa-viz-heapview">
       {visible.map(([name, value]) => {
         const det = detectStructure(value, heap, annotations[name]);
+        const overlay = patternOverlay && patternOverlay.arrayLocalName === name
+          ? { lo: patternOverlay.lo, hi: patternOverlay.hi, kind: patternOverlay.kind, midIndex: patternOverlay.midIndex }
+          : null;
         return (
           <section key={name} className="dsa-viz-heap-card" data-kind={det.kind}>
             <header>
               <strong>{name}</strong>
               <span className="dsa-viz-heap-kind">{det.kind}</span>
             </header>
-            <Renderer kind={det.kind} rootId={det.rootId} heap={heap} />
+            <Renderer kind={det.kind} rootId={det.rootId} heap={heap} overlay={overlay} />
           </section>
         );
       })}
@@ -56,11 +66,12 @@ const Renderer: React.FC<{
   kind: string;
   rootId?: string;
   heap: Record<string, HeapObject>;
-}> = ({ kind, rootId, heap }) => {
+  overlay?: ArrayOverlay | null;
+}> = ({ kind, rootId, heap, overlay }) => {
   if (!rootId) return null;
   switch (kind) {
     case "array":
-      return <ArrayView rootId={rootId} heap={heap} />;
+      return <ArrayView rootId={rootId} heap={heap} overlay={overlay} />;
     case "linked_list":
       return <LinkedListView rootId={rootId} heap={heap} />;
     case "tree":

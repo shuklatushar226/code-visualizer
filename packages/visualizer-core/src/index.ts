@@ -16,6 +16,8 @@ export { HeapTreeView } from "./components/structures/HeapTreeView";
 export { detectStructure } from "./lib/detectStructure";
 export { buildRecursionTree, findActiveCall, countCalls } from "./lib/recursionTree";
 export type { CallNode } from "./lib/recursionTree";
+export { detectPatterns, activePatternHit } from "./lib/patterns";
+export type { PatternHit, PatternKind } from "./lib/patterns";
 export { usePlayback } from "./hooks/usePlayback";
 export { useTrace } from "./hooks/useTrace";
 export { traceClient } from "./lib/traceClient";

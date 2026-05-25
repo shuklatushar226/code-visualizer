@@ -1,10 +1,15 @@
 import React, { useMemo, useState } from "react";
-import type { Trace } from "@dsa-viz/trace-schema";
+import type { Frame, Trace } from "@dsa-viz/trace-schema";
 import { usePlayback } from "../hooks/usePlayback";
+import {
+  activePatternHit,
+  detectPatterns,
+  type PatternHit,
+} from "../lib/patterns";
 import { CodePane } from "./CodePane";
 import { ControlBar } from "./ControlBar";
 import { CallStack } from "./CallStack";
-import { HeapView } from "./HeapView";
+import { HeapView, type PatternOverlayState } from "./HeapView";
 import { RecursionTreeView } from "./RecursionTreeView";
 
 export interface VisualizerPanelProps {
@@ -47,6 +52,12 @@ export const VisualizerPanel: React.FC<VisualizerPanelProps> = ({
     callCount > RECURSION_TAB_THRESHOLD ? "recursion" : "heap",
   );
 
+  const patternHits = useMemo(() => detectPatterns(trace), [trace]);
+  const overlay = useMemo(
+    () => computeOverlay(activePatternHit(patternHits, playback.t), event?.stack[event.stack.length - 1]),
+    [patternHits, playback.t, event],
+  );
+
   return (
     <div className={["dsa-viz-panel", className].filter(Boolean).join(" ")}>
       <div className="dsa-viz-row dsa-viz-top">
@@ -85,6 +96,7 @@ export const VisualizerPanel: React.FC<VisualizerPanelProps> = ({
             heap={event?.heap ?? {}}
             frame={event?.stack[event.stack.length - 1]}
             annotations={trace.annotations ?? {}}
+            patternOverlay={overlay}
           />
         ) : (
           <RecursionTreeView trace={trace} t={playback.t} />
@@ -96,3 +108,29 @@ export const VisualizerPanel: React.FC<VisualizerPanelProps> = ({
     </div>
   );
 };
+
+function computeOverlay(hit: PatternHit | null, frame: Frame | undefined): PatternOverlayState | null {
+  if (!hit || !frame || !hit.arrayLocalName) return null;
+  if (hit.kind === "binary_search") {
+    const lo = frame.locals[hit.pointerLocals[0]];
+    const hi = frame.locals[hit.pointerLocals[1]];
+    const mid = frame.locals[hit.pointerLocals[2]];
+    if (lo?.kind !== "int" || hi?.kind !== "int" || mid?.kind !== "int") return null;
+    return {
+      kind: hit.kind,
+      arrayLocalName: hit.arrayLocalName,
+      lo: lo.v,
+      hi: hi.v,
+      midIndex: mid.v,
+    };
+  }
+  const a = frame.locals[hit.pointerLocals[0]];
+  const b = frame.locals[hit.pointerLocals[1]];
+  if (a?.kind !== "int" || b?.kind !== "int") return null;
+  return {
+    kind: hit.kind,
+    arrayLocalName: hit.arrayLocalName,
+    lo: Math.min(a.v, b.v),
+    hi: Math.max(a.v, b.v),
+  };
+}
