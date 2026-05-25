@@ -77,16 +77,20 @@ function htmlShell(
 <html><head>
 <meta charset="utf-8" />
 <meta http-equiv="Content-Security-Policy"
-  content="default-src 'none'; style-src ${cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}'; img-src ${cspSource} data:;" />
+  content="default-src 'none';
+           style-src ${cspSource} 'unsafe-inline' https://api.fontshare.com https://fonts.googleapis.com;
+           font-src https://api.fontshare.com https://cdn.fontshare.com https://fonts.gstatic.com;
+           script-src 'nonce-${nonce}';
+           img-src ${cspSource} data:;" />
 <title>DSA Visualizer</title>
 <link rel="stylesheet" href="${cssUri}" />
 <style>
-  html, body, #root { margin: 0; height: 100vh; background: #1e1e1e; color: #d4d4d4; }
+  html, body, #root { margin: 0; height: 100vh; background: #0c0c0d; color: #ece8de; }
 </style>
 </head>
 <body>
   <div id="root">
-    <div style="padding:12px;font:13px ui-monospace, 'JetBrains Mono', monospace;">
+    <div style="padding:14px 18px;font:11px 'JetBrains Mono', ui-monospace, monospace;letter-spacing:0.1em;text-transform:uppercase;color:#8e8a7e;">
       Waiting for trace…
     </div>
   </div>

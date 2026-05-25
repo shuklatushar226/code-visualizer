@@ -1,5 +1,27 @@
-/* Page-level styles for the standalone web app shell. The visualizer itself
-   carries its own dark theme via @dsa-viz/visualizer-core/src/styles.css. */
+/* DSV web-app — page chrome.
+   The visualizer panel carries its own theme via visualizer-core/styles.css.
+   This file paints the shell that surrounds it: masthead, editor pane, and
+   compare mode. Variables stay aligned with the panel's so the seam between
+   page and panel disappears. */
+
+:root {
+  --font-display: "Cabinet Grotesk", "Inter Tight", system-ui, sans-serif;
+  --font-sans: "Inter Tight", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  --ink: #0c0c0d;
+  --paper: #161514;
+  --paper-2: #1c1a17;
+  --rule: #26241f;
+  --rule-strong: #3a362f;
+  --cream: #ece8de;
+  --muted: #8e8a7e;
+  --faint: #5a574f;
+  --accent: #ffd66b;
+  --accent-ink: #0c0c0d;
+  --annotation: #6fb29a;
+  --danger: #e07a6b;
+}
 
 * { box-sizing: border-box; }
 
@@ -9,9 +31,14 @@ html, body, #root {
 }
 
 body {
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  background: #0f0f10;
-  color: #eaeaea;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  background: var(--ink);
+  color: var(--cream);
+  /* subtle film-grain — data URI so no network request */
+  background-image:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1   0 0 0 0 1   0 0 0 0 1   0 0 0 0.015 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  background-repeat: repeat;
 }
 
 .app-shell {
@@ -20,121 +47,440 @@ body {
   height: 100%;
 }
 
+/* ──────────────────────────────────────────────────────────────
+   Masthead
+   ────────────────────────────────────────────────────────────── */
+
 .app-header {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  gap: 6px;
+  padding: 20px 28px 16px;
+  border-bottom: 1px solid var(--rule);
+  background: linear-gradient(180deg, rgba(255, 214, 107, 0.025), transparent 60%);
+}
+
+.app-header .masthead-top {
+  display: flex;
+  align-items: baseline;
   justify-content: space-between;
-  padding: 10px 16px;
-  border-bottom: 1px solid #222;
-  background: #161616;
+  gap: 24px;
 }
 
 .app-header h1 {
-  font-size: 16px;
+  font-family: var(--font-display);
+  font-size: 28px;
   margin: 0;
-  font-weight: 600;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--cream);
+  animation: rise 600ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.app-header h1 .mono {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--accent);
+}
+.app-header h1 .em {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 500;
+  color: var(--muted);
+  font-size: 0.7em;
+  letter-spacing: 0.04em;
+  margin-left: 8px;
+  text-transform: uppercase;
+}
+
+.app-header .tagline {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0;
   letter-spacing: 0.02em;
+  animation: rise 600ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 80ms;
+}
+.app-header .tagline strong {
+  color: var(--cream);
+  font-weight: 500;
 }
 
 .app-header .meta {
-  font-size: 12px;
-  color: #888;
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  font-size: 11px;
+  font-family: var(--font-sans);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  animation: rise 600ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 160ms;
 }
+.app-header .meta label {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.app-header .meta select,
+.app-header .meta input[type="text"] {
+  background: transparent;
+  color: var(--cream);
+  border: 0;
+  border-bottom: 1px solid var(--rule);
+  border-radius: 0;
+  padding: 2px 4px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.app-header .meta select:focus,
+.app-header .meta input[type="text"]:focus {
+  outline: none;
+  border-bottom-color: var(--accent);
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ──────────────────────────────────────────────────────────────
+   Body layout
+   ────────────────────────────────────────────────────────────── */
 
 .app-body {
   display: grid;
-  grid-template-columns: 1fr 1.4fr;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
   min-height: 0;
+}
+.app-body.compare-body {
+  /* In Compare mode the editor side hosts two textareas and the diff
+     summary, so it needs more room. */
+  grid-template-columns: minmax(0, 6fr) minmax(0, 6fr);
 }
 
 .editor-pane {
   display: flex;
   flex-direction: column;
-  border-right: 1px solid #222;
+  border-right: 1px solid var(--rule);
   min-height: 0;
+  background: var(--ink);
+  position: relative;
 }
+
+/* ──────────────────────────────────────────────────────────────
+   Editor toolbar
+   ────────────────────────────────────────────────────────────── */
 
 .editor-toolbar {
   display: flex;
-  gap: 10px;
+  gap: 14px;
   align-items: center;
-  padding: 8px 12px;
-  background: #161616;
-  border-bottom: 1px solid #222;
+  padding: 10px 16px;
+  background: var(--paper);
+  border-bottom: 1px solid var(--rule);
   flex-wrap: wrap;
+  font-family: var(--font-sans);
 }
 
-.editor-toolbar label { font-size: 12px; color: #aaa; }
+.editor-toolbar label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.editor-toolbar label.stdin { flex: 1; }
+.editor-toolbar label.stdin input[type="text"] { width: 100%; }
+
 .editor-toolbar select,
 .editor-toolbar input[type="text"] {
-  background: #0f0f10;
-  color: #eaeaea;
-  border: 1px solid #333;
-  border-radius: 4px;
-  padding: 4px 6px;
+  background: transparent;
+  color: var(--cream);
+  border: 0;
+  border-bottom: 1px solid var(--rule);
+  border-radius: 0;
+  padding: 3px 4px;
+  font-family: var(--font-mono);
   font-size: 12px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.editor-toolbar select:focus,
+.editor-toolbar input[type="text"]:focus {
+  outline: none;
+  border-bottom-color: var(--accent);
 }
 
 .editor-toolbar button {
-  background: #2a5fd6;
-  color: #fff;
-  border: 0;
-  padding: 6px 12px;
-  border-radius: 4px;
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  padding: 6px 14px;
+  border-radius: 2px;
   cursor: pointer;
-  font-weight: 600;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transition: background 140ms ease, color 140ms ease, transform 140ms ease;
 }
-.editor-toolbar button:disabled { opacity: 0.5; cursor: default; }
+.editor-toolbar button:hover {
+  background: var(--accent);
+  color: var(--accent-ink);
+  transform: translateY(-1px);
+}
+.editor-toolbar button:disabled {
+  opacity: 0.4;
+  cursor: default;
+  transform: none;
+  background: transparent;
+  color: var(--muted);
+  border-color: var(--rule);
+}
+
+/* The Share button is secondary — outlined but in cream. */
+.editor-toolbar button[title*="Share"] {
+  color: var(--cream);
+  border-color: var(--rule-strong);
+}
+.editor-toolbar button[title*="Share"]:hover {
+  background: var(--paper-2);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.share-link {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  color: var(--annotation);
+  text-decoration: none;
+  margin-left: 6px;
+  font-style: italic;
+}
+.share-link::before { content: "· "; }
+
+/* ──────────────────────────────────────────────────────────────
+   Editor textarea — the manuscript
+   ────────────────────────────────────────────────────────────── */
 
 .editor-textarea {
   flex: 1;
-  background: #0f0f10;
-  color: #eaeaea;
+  background: var(--ink);
+  color: var(--cream);
   border: 0;
-  padding: 12px;
-  font-family: ui-monospace, "JetBrains Mono", monospace;
+  padding: 20px 24px;
+  font-family: var(--font-mono);
   font-size: 13px;
+  line-height: 1.55;
   resize: none;
   outline: none;
   min-height: 0;
+  caret-color: var(--accent);
+  /* a faint guide line at the left margin */
+  background-image: linear-gradient(to right, var(--rule) 0, var(--rule) 1px, transparent 1px, transparent 100%);
+  background-size: 16px 100%;
+  background-position: 0 0;
+  background-repeat: no-repeat;
 }
+.editor-textarea::selection {
+  background: rgba(255, 214, 107, 0.25);
+  color: var(--cream);
+}
+
+/* ──────────────────────────────────────────────────────────────
+   Viz pane
+   ────────────────────────────────────────────────────────────── */
 
 .viz-pane {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  background: #0f0f10;
+  background: var(--ink);
+  position: relative;
 }
 
-.viz-empty, .viz-error {
-  padding: 24px;
-  color: #888;
+.viz-error {
+  padding: 24px 28px;
+  color: var(--danger);
+  font-family: var(--font-mono);
   font-size: 13px;
+  white-space: pre-wrap;
+  border-left: 2px solid var(--danger);
+  margin: 24px;
+  background: rgba(224, 122, 107, 0.05);
 }
-.viz-error { color: #e36b6b; white-space: pre-wrap; }
 
-/* Compare mode: two editors stacked above the input, two panels side-by-side. */
+/* ──────────────────────────────────────────────────────────────
+   Empty state — typographic plate
+   ────────────────────────────────────────────────────────────── */
+
+.viz-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  padding: 48px 24px;
+  flex: 1;
+  text-align: center;
+}
+
+.empty-plate {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  max-width: 380px;
+}
+
+.empty-plate h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 40px;
+  line-height: 1.05;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  color: var(--cream);
+  animation: rise 700ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.empty-plate h2 .accent { color: var(--accent); }
+.empty-plate h2 .period { color: var(--accent); }
+
+.empty-plate p {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.6;
+  animation: rise 700ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 120ms;
+}
+.empty-plate p .kbd {
+  display: inline-block;
+  padding: 1px 6px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 2px;
+  color: var(--cream);
+  background: var(--paper);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+}
+
+.empty-plate .empty-rule {
+  width: 64px;
+  height: 1px;
+  background: var(--rule-strong);
+  animation: rise 700ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 200ms;
+}
+
+.empty-plate .empty-anim {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 80px;
+  animation: rise 700ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 280ms;
+}
+.empty-plate .empty-anim .bar {
+  width: 14px;
+  background: var(--rule-strong);
+  border-radius: 1px 1px 0 0;
+  transform-origin: bottom;
+  animation: sort 3.4s ease-in-out infinite;
+}
+.empty-plate .empty-anim .bar:nth-child(1) { height: 70%; animation-delay: 0s; }
+.empty-plate .empty-anim .bar:nth-child(2) { height: 40%; animation-delay: 0.4s; }
+.empty-plate .empty-anim .bar:nth-child(3) { height: 90%; animation-delay: 0.8s; }
+.empty-plate .empty-anim .bar:nth-child(4) { height: 55%; animation-delay: 1.2s; }
+.empty-plate .empty-anim .bar:nth-child(5) { height: 30%; animation-delay: 1.6s; }
+.empty-plate .empty-anim .bar:nth-child(6) { height: 75%; animation-delay: 2.0s; }
+
+@keyframes sort {
+  0%, 80%, 100% { background: var(--rule-strong); transform: scaleY(1); }
+  40%, 50%      { background: var(--accent); transform: scaleY(1.08); }
+}
+
+/* ──────────────────────────────────────────────────────────────
+   Compare mode
+   ────────────────────────────────────────────────────────────── */
+
 .compare-editors {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 6px;
+  gap: 0;
   flex: 1;
   min-height: 0;
+  position: relative;
 }
+.compare-editors::before {
+  /* the centred Δ glyph between the two editors */
+  content: "Δ";
+  position: absolute;
+  left: 50%;
+  top: 12px;
+  transform: translateX(-50%);
+  color: var(--accent);
+  background: var(--ink);
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 700;
+  padding: 0 6px;
+  z-index: 2;
+  pointer-events: none;
+}
+.compare-editors::after {
+  /* the hairline rule that the Δ punctuates */
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--rule);
+  z-index: 1;
+}
+.compare-editors .editor-textarea:first-child { padding-right: 28px; }
+.compare-editors .editor-textarea:last-child { padding-left: 28px; }
 
 .diff-summary {
-  padding: 8px 10px;
+  padding: 12px 16px;
+  font-family: var(--font-mono);
   font-size: 12px;
-  border-top: 1px solid #222;
-  background: #1b1b1b;
+  border-top: 1px solid var(--rule);
+  background: var(--paper);
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
-.diff-summary[data-diverged="true"] { color: #f0c674; }
-.diff-summary[data-diverged="false"] { color: #4ec9b0; }
+.diff-summary[data-diverged="true"] {
+  color: var(--cream);
+  border-left: 2px solid var(--accent);
+}
+.diff-summary[data-diverged="true"] strong {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--accent);
+  font-size: 14px;
+  letter-spacing: -0.01em;
+}
+.diff-summary[data-diverged="false"] {
+  color: var(--annotation);
+  border-left: 2px solid var(--annotation);
+}
 
 .compare-panels {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 6px;
+  gap: 0;
   height: 100%;
   min-height: 0;
 }
@@ -142,23 +488,18 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  border-right: 1px solid #222;
+  border-right: 1px solid var(--rule);
 }
 .compare-panel:last-child { border-right: 0; }
 .compare-panel-title {
   margin: 0;
-  padding: 6px 10px;
+  padding: 10px 16px;
+  font-family: var(--font-sans);
   font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #888;
-  background: #161616;
-  border-bottom: 1px solid #222;
-}
-
-.share-link {
-  font-size: 11px;
-  color: #4ec9b0;
-  text-decoration: none;
-  margin-left: 4px;
+  letter-spacing: 0.14em;
+  font-weight: 500;
+  color: var(--muted);
+  background: var(--paper);
+  border-bottom: 1px solid var(--rule);
 }

@@ -201,23 +201,34 @@ export const App: React.FC = () => {
   return (
     <div className="app-shell">
       <header className="app-header">
-        <h1>DSA Visualizer · standalone</h1>
-        <span className="meta" style={{ display: "flex", gap: 12, alignItems: "center" }}>
-          <label>
-            mode{" "}
-            <select value={mode} onChange={(e) => onModeChange(e.target.value as Mode)}>
-              <option value="single">Single</option>
-              <option value="compare">Compare</option>
-            </select>
-          </label>
-          backend:{" "}
-          <input
-            type="text"
-            value={backend}
-            onChange={(e) => onBackendChange(e.target.value)}
-            style={{ width: 220 }}
-          />
-        </span>
+        <div className="masthead-top">
+          <h1>
+            <span className="mono">DSV</span> — a code visualizer
+            <span className="em">no. 001</span>
+          </h1>
+          <span className="meta">
+            <label>
+              mode{" "}
+              <select value={mode} onChange={(e) => onModeChange(e.target.value as Mode)}>
+                <option value="single">Single</option>
+                <option value="compare">Compare</option>
+              </select>
+            </label>
+            <label>
+              backend{" "}
+              <input
+                type="text"
+                value={backend}
+                onChange={(e) => onBackendChange(e.target.value)}
+                style={{ width: 220 }}
+              />
+            </label>
+          </span>
+        </div>
+        <p className="tagline">
+          <strong>step through.</strong> see why. trace Python or C++ line-by-line —
+          variables, the call stack, linked lists, trees, recursion, patterns.
+        </p>
       </header>
 
       {mode === "single" ? (
@@ -234,14 +245,13 @@ export const App: React.FC = () => {
                   <option value="cpp">C++</option>
                 </select>
               </label>
-              <label style={{ flex: 1 }}>
+              <label className="stdin">
                 stdin{" "}
                 <input
                   type="text"
                   value={stdin}
                   onChange={(e) => setStdin(e.target.value)}
                   placeholder="(optional)"
-                  style={{ width: "100%" }}
                 />
               </label>
               <button onClick={run} disabled={busy}>
@@ -272,8 +282,27 @@ export const App: React.FC = () => {
             {err && <div className="viz-error">Error: {err}</div>}
             {!err && !trace && (
               <div className="viz-empty">
-                Edit the program on the left and press <strong>Run &amp; Visualize</strong>.
-                Make sure the FastAPI backend is reachable at <code>{backend}</code>.
+                <div className="empty-plate">
+                  <h2>
+                    step through<span className="period">.</span>
+                    <br />
+                    see <span className="accent">why</span><span className="period">.</span>
+                  </h2>
+                  <div className="empty-rule" aria-hidden="true" />
+                  <p>
+                    Paste Python on the left. Press{" "}
+                    <span className="kbd">Run &amp; Visualize</span>. Watch your code
+                    run, one line at a time.
+                  </p>
+                  <div className="empty-anim" aria-hidden="true">
+                    <span className="bar" />
+                    <span className="bar" />
+                    <span className="bar" />
+                    <span className="bar" />
+                    <span className="bar" />
+                    <span className="bar" />
+                  </div>
+                </div>
               </div>
             )}
             {trace && <VisualizerPanel trace={trace} />}

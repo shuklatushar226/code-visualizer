@@ -1,31 +1,52 @@
-/* Floating "Visualize" button and host frame, injected by every adapter. */
+/* DSV browser-extension: FAB + host frame.
+   These styles get injected into every host page (LeetCode, HackerRank,
+   etc.) by the manifest's content_scripts entries, so the selectors must
+   not collide with the host page's CSS. Z-indexes are deliberately
+   maxed-out so user-side modals don't cover the FAB.
+*/
 
 .dsa-viz-fab {
   position: fixed;
-  right: 16px;
-  bottom: 16px;
-  z-index: 99999;
-  background: #4ec9b0;
-  color: #fff;
-  font: 600 13px/1 system-ui, sans-serif;
-  padding: 10px 14px;
-  border: none;
-  border-radius: 999px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  right: 20px;
+  bottom: 20px;
+  z-index: 2147483646;
+  background: #ffd66b;
+  color: #0c0c0d;
+  font: 700 11px/1 "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 12px 16px;
+  border: 0;
+  border-radius: 2px;
+  box-shadow:
+    0 0 0 1px rgba(255, 214, 107, 0.35),
+    0 6px 24px rgba(0, 0, 0, 0.35);
   cursor: pointer;
+  transition: transform 140ms ease, box-shadow 140ms ease;
+}
+.dsa-viz-fab::before {
+  content: "▸ ";
+  color: #0c0c0d;
+}
+.dsa-viz-fab:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 0 0 1px rgba(255, 214, 107, 0.55),
+    0 10px 32px rgba(0, 0, 0, 0.45);
 }
 
 .dsa-viz-frame-host {
   position: fixed;
-  right: 16px;
-  bottom: 72px;
-  width: min(560px, 90vw);
-  height: min(640px, 80vh);
-  z-index: 99998;
-  background: #1e1e1e;
-  border-radius: 8px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-  border: 1px solid #333;
+  right: 20px;
+  bottom: 76px;
+  width: min(580px, 92vw);
+  height: min(680px, 82vh);
+  z-index: 2147483645;
+  background: #0c0c0d;
+  border-radius: 4px;
+  box-shadow:
+    0 0 0 1px #26241f,
+    0 20px 64px rgba(0, 0, 0, 0.55);
   overflow: hidden;
   display: none;
 }
