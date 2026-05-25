@@ -1,6 +1,6 @@
 import type { Frame, TraceEvent, Value } from "@dsa-viz/trace-schema";
 
-export type PatternKind = "sliding_window" | "two_pointer" | "binary_search";
+export type PatternKind = "sliding_window" | "two_pointer" | "binary_search" | "dp";
 
 export interface PatternHit {
   kind: PatternKind;

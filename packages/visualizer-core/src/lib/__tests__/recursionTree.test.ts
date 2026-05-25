@@ -106,6 +106,35 @@ describe("buildRecursionTree", () => {
   });
 });
 
+describe("maxNodes cap", () => {
+  it("stops growing the tree once maxNodes real frames exist and marks the parent as truncated", () => {
+    // Synthesize 10 nested calls; cap at 3.
+    const stack: Frame[] = [];
+    const events: TraceEvent[] = [];
+    for (let i = 0; i < 10; i++) {
+      stack.push(frame(`f${i}`, { n: i }, ["n"]));
+      events.push(ev("call", stack.slice()));
+    }
+    while (stack.length > 0) {
+      events.push(ev("return", stack.slice()));
+      stack.pop();
+    }
+
+    const root = buildRecursionTree(events, { maxNodes: 3 });
+    expect(countCalls(root)).toBe(3); // only 3 real nodes
+    // Walk to the deepest real frame; it should have a single +more child.
+    let cur = root.children[0];
+    while (cur && !cur.truncated) {
+      const next = cur.children.find((c) => !c.truncated);
+      if (!next) break;
+      cur = next;
+    }
+    // At the cap boundary the last real node has a +more sibling.
+    const reachedSomeTruncated = JSON.stringify(root).includes('"truncated":true');
+    expect(reachedSomeTruncated).toBe(true);
+  });
+});
+
 describe("findActiveCall", () => {
   it("returns null for a t that falls outside every call", () => {
     expect(findActiveCall(buildRecursionTree([]), 0, 0)).toBeNull();

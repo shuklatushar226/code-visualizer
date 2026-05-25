@@ -124,6 +124,17 @@ function computeOverlay(hit: PatternHit | null, frame: Frame | undefined): Patte
       midIndex: mid.v,
     };
   }
+  if (hit.kind === "dp") {
+    // DP overlay highlights every filled cell of the array. Without
+    // per-cell book-keeping we fall back to spanning the whole array; the
+    // ArrayView clamps to its own length.
+    return {
+      kind: hit.kind,
+      arrayLocalName: hit.arrayLocalName,
+      lo: 0,
+      hi: Number.MAX_SAFE_INTEGER,
+    };
+  }
   const a = frame.locals[hit.pointerLocals[0]];
   const b = frame.locals[hit.pointerLocals[1]];
   if (a?.kind !== "int" || b?.kind !== "int") return null;

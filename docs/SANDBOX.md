@@ -36,6 +36,11 @@ Protocol JSON document on stdout. Three layers of defence stack:
    The image and seccomp profile are starting points — tighten the
    syscall allowlist further if you have a narrower workload.
 
+   The seccomp profile (`packages/backend/sandbox.seccomp.json`) starts
+   from Docker's default-deny and allows only the syscalls Python +
+   g++ + gdb need. Keep it strict JSON — Docker's libseccomp rejects
+   unknown top-level keys, so don't add `_comment` fields or similar.
+
 ## gVisor (defence in depth)
 
 For untrusted multi-tenant hosting, replace `--runtime=runc` with

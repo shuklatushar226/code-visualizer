@@ -23,7 +23,10 @@ export const RecursionTreeView: React.FC<RecursionTreeViewProps> = ({
   t,
   maxNodes = 500,
 }) => {
-  const root = useMemo(() => buildRecursionTree(trace.events), [trace.events]);
+  const root = useMemo(
+    () => buildRecursionTree(trace.events, { maxNodes }),
+    [trace.events, maxNodes],
+  );
   const total = countCalls(root);
 
   const lastEvent = Math.max(0, trace.events.length - 1);
@@ -39,13 +42,6 @@ export const RecursionTreeView: React.FC<RecursionTreeViewProps> = ({
 
   if (total === 0) {
     return <em className="dsa-viz-recursion-empty">(no calls recorded)</em>;
-  }
-  if (total > maxNodes) {
-    return (
-      <em className="dsa-viz-recursion-empty">
-        ({total} calls — too many to render; bump maxNodes to override)
-      </em>
-    );
   }
 
   const nodes = layout.descendants().filter((n) => n.depth > 0);

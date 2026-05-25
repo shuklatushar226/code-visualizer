@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
-import type { Frame, TraceEvent, Value } from "@dsa-viz/trace-schema";
+import type { Frame, HeapObject, TraceEvent, Value } from "@dsa-viz/trace-schema";
 import { activePatternHit, detectPatterns } from "../index";
 import { detectSlidingWindow } from "../slidingWindow";
 import { detectTwoPointer } from "../twoPointer";
 import { detectBinarySearch } from "../binarySearch";
+import { detectDP } from "../dp";
 
 const v = (n: number): Value => ({ kind: "int", v: n });
 
@@ -124,6 +125,71 @@ describe("detectBinarySearch", () => {
       { lo: v(0), hi: v(7), mid: v(3) },
     ]);
     expect(detectBinarySearch(events)).toHaveLength(0);
+  });
+});
+
+/** Build a steps trace where the heap contains a list at heap[h_arr] and each
+ * step snapshots the list's items array.  Locals at each step include
+ * `dp -> ref(h_arr)`. */
+function stepsWithArray(func: string, perStep: Value[][]): TraceEvent[] {
+  const m = frame("<module>");
+  const out: TraceEvent[] = [
+    ev("call", [m]),
+    ev("call", [m, frame(func, { dp: { kind: "ref", id: "h_arr" } })]),
+  ];
+  for (const items of perStep) {
+    const heap: Record<string, HeapObject> = { h_arr: { kind: "list", items } };
+    out.push({
+      t: 0,
+      kind: "step",
+      line: 1,
+      file: "main.py",
+      stack: [m, frame(func, { dp: { kind: "ref", id: "h_arr" } })],
+      heap,
+      stdout_delta: null,
+      exception: null,
+    });
+  }
+  out.push(ev("return", [m, frame(func, { dp: { kind: "ref", id: "h_arr" } })]));
+  out.push(ev("return", [m]));
+  return out;
+}
+
+describe("detectDP", () => {
+  it("fires on an array that fills cells in strict index order", () => {
+    const INF: Value = { kind: "int", v: 999 };
+    const events = stepsWithArray("solve", [
+      [INF, INF, INF, INF, INF],
+      [v(0), INF, INF, INF, INF],
+      [v(0), v(1), INF, INF, INF],
+      [v(0), v(1), v(2), INF, INF],
+      [v(0), v(1), v(2), v(3), INF],
+      [v(0), v(1), v(2), v(3), v(4)],
+    ]);
+    const hits = detectDP(events);
+    expect(hits).toHaveLength(1);
+    expect(hits[0].arrayLocalName).toBe("dp");
+  });
+
+  it("does not fire when the array changes in arbitrary order", () => {
+    const INF: Value = { kind: "int", v: 999 };
+    const events = stepsWithArray("solve", [
+      [INF, INF, INF, INF],
+      [INF, INF, INF, v(4)],   // cell 3 first
+      [INF, v(1), INF, v(4)],  // then cell 1
+      [v(0), v(1), INF, v(4)], // then cell 0 — out of order
+    ]);
+    expect(detectDP(events)).toHaveLength(0);
+  });
+
+  it("does not fire when fewer than 3 cells fill", () => {
+    const INF: Value = { kind: "int", v: 999 };
+    const events = stepsWithArray("solve", [
+      [INF, INF, INF, INF],
+      [v(0), INF, INF, INF],
+      [v(0), v(1), INF, INF],
+    ]);
+    expect(detectDP(events)).toHaveLength(0);
   });
 });
 

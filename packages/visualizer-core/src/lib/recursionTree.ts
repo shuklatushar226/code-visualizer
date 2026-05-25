@@ -7,6 +7,13 @@ export interface CallNode {
   startEvent: number;
   endEvent?: number;
   children: CallNode[];
+  /** True for synthetic "+N more" nodes inserted when maxNodes is hit. */
+  truncated?: boolean;
+}
+
+export interface BuildOptions {
+  /** Stop pushing new call nodes once this many real nodes exist. */
+  maxNodes?: number;
 }
 
 /**
@@ -19,7 +26,8 @@ export interface CallNode {
  * The synthetic root represents "before any code ran" and is filtered out
  * by the view; tests use it to make the API total over empty traces.
  */
-export function buildRecursionTree(events: TraceEvent[]): CallNode {
+export function buildRecursionTree(events: TraceEvent[], opts: BuildOptions = {}): CallNode {
+  const maxNodes = opts.maxNodes ?? Infinity;
   const root: CallNode = {
     id: "root",
     func: "<root>",
@@ -29,11 +37,35 @@ export function buildRecursionTree(events: TraceEvent[]): CallNode {
   };
   const open: CallNode[] = [root];
   let counter = 0;
+  let realNodes = 0;
+  // Once we've hit the cap we still drain the call/return tape so endEvents
+  // for already-open nodes resolve correctly, but new pushes become a single
+  // synthetic "+N more" sibling on the current parent.
+  const truncated: Set<CallNode> = new Set();
 
   events.forEach((ev, i) => {
     if (ev.kind === "call") {
       const top = ev.stack[ev.stack.length - 1];
       if (!top) return;
+      const parent = open[open.length - 1];
+      if (realNodes >= maxNodes) {
+        // Mark the parent so the view can render a single ellipsis child.
+        if (!truncated.has(parent)) {
+          parent.children.push({
+            id: `n_truncated_${counter++}`,
+            func: "+more",
+            args: {},
+            startEvent: i,
+            endEvent: i,
+            children: [],
+            truncated: true,
+          });
+          truncated.add(parent);
+        }
+        // Push a placeholder so depth tracking continues to work for matching returns.
+        open.push({ id: "placeholder", func: "", args: {}, startEvent: i, children: [], truncated: true });
+        return;
+      }
       const node: CallNode = {
         id: `n_${counter++}`,
         func: top.func,
@@ -41,12 +73,13 @@ export function buildRecursionTree(events: TraceEvent[]): CallNode {
         startEvent: i,
         children: [],
       };
-      open[open.length - 1].children.push(node);
+      parent.children.push(node);
       open.push(node);
+      realNodes += 1;
     } else if (ev.kind === "return") {
       if (open.length > 1) {
         const popped = open.pop()!;
-        popped.endEvent = i;
+        if (!popped.truncated) popped.endEvent = i;
       }
     }
   });
@@ -54,7 +87,7 @@ export function buildRecursionTree(events: TraceEvent[]): CallNode {
   // Close any frames still open at the end.
   const lastIdx = Math.max(0, events.length - 1);
   for (let i = open.length - 1; i > 0; i--) {
-    open[i].endEvent = lastIdx;
+    if (!open[i].truncated) open[i].endEvent = lastIdx;
   }
   return root;
 }
@@ -91,7 +124,7 @@ export function findActiveCall(
 export function countCalls(root: CallNode): number {
   let n = 0;
   function walk(node: CallNode): void {
-    if (node.id !== "root") n += 1;
+    if (node.id !== "root" && !node.truncated) n += 1;
     node.children.forEach(walk);
   }
   walk(root);

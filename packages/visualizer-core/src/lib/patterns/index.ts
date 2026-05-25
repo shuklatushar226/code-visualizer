@@ -3,25 +3,29 @@ import type { PatternHit, PatternKind } from "./types";
 import { detectSlidingWindow } from "./slidingWindow";
 import { detectTwoPointer } from "./twoPointer";
 import { detectBinarySearch } from "./binarySearch";
+import { detectDP } from "./dp";
 
 export type { PatternHit, PatternKind } from "./types";
 
 /**
- * Run every detector and return the union of hits. Binary search wins over
- * sliding window / two-pointer where they overlap on the same run, since
- * its lo/hi/mid signature is the most specific.
+ * Run every detector and return the union of hits. Specificity ordering:
+ * binary_search > dp > two_pointer > sliding_window. The more specific
+ * signature wins on shared runs.
  */
 export function detectPatterns(trace: Trace | TraceEvent[]): PatternHit[] {
   const events = Array.isArray(trace) ? trace : trace.events;
   const bin = detectBinarySearch(events);
+  const dp = detectDP(events);
   const tp = detectTwoPointer(events);
   const sw = detectSlidingWindow(events);
 
   const taken = new Set<string>(bin.map(runKey));
+  const dpFiltered = dp.filter((h) => !taken.has(runKey(h)));
+  dpFiltered.forEach((h) => taken.add(runKey(h)));
   const tpFiltered = tp.filter((h) => !taken.has(runKey(h)));
   tpFiltered.forEach((h) => taken.add(runKey(h)));
   const swFiltered = sw.filter((h) => !taken.has(runKey(h)));
-  return [...bin, ...tpFiltered, ...swFiltered];
+  return [...bin, ...dpFiltered, ...tpFiltered, ...swFiltered];
 }
 
 function runKey(hit: PatternHit): string {

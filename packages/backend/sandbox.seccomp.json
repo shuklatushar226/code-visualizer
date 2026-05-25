@@ -1,5 +1,4 @@
 {
-  "_comment": "Minimal seccomp profile for the dsa-viz sandbox. Starts from Docker's default-deny and adds only syscalls Python + g++/gdb need. Tighten for hosted prod.",
   "defaultAction": "SCMP_ACT_ERRNO",
   "architectures": ["SCMP_ARCH_X86_64", "SCMP_ARCH_AARCH64"],
   "syscalls": [

@@ -33,8 +33,13 @@ export const ArrayView: React.FC<ArrayViewProps> = ({ rootId, heap, fallback, ov
     return <em>(not array-like: {obj.kind})</em>;
   }
 
-  const overlayActive =
-    overlay && overlay.lo <= overlay.hi && overlay.lo >= 0 && overlay.hi < obj.items.length;
+  // Clamp the overlay to the array's actual length (DP detector spans the
+  // whole array via Number.MAX_SAFE_INTEGER; binary search etc. provide
+  // real bounds).
+  const lastIdx = obj.items.length - 1;
+  const clampedLo = overlay ? Math.max(0, overlay.lo) : 0;
+  const clampedHi = overlay ? Math.min(lastIdx, overlay.hi) : -1;
+  const overlayActive = !!overlay && clampedLo <= clampedHi && obj.items.length > 0;
 
   return (
     <div
@@ -46,12 +51,12 @@ export const ArrayView: React.FC<ArrayViewProps> = ({ rootId, heap, fallback, ov
     >
       {overlayActive && (
         <div className="dsa-viz-array-overlay-label">
-          {labelFor(overlay.kind)} [{overlay.lo}…{overlay.hi}]
+          {labelFor(overlay.kind)} [{clampedLo}…{clampedHi}]
         </div>
       )}
       <div className="dsa-viz-array-cells">
         {obj.items.map((v, i) => {
-          const inWindow = overlayActive && i >= overlay.lo && i <= overlay.hi;
+          const inWindow = overlayActive && i >= clampedLo && i <= clampedHi;
           const isMid = overlayActive && overlay.midIndex === i;
           const cls = [
             "dsa-viz-cell",
@@ -78,6 +83,8 @@ function labelFor(kind: PatternKind): string {
       return "two pointers";
     case "binary_search":
       return "binary search";
+    case "dp":
+      return "dp tabulation";
   }
 }
 
