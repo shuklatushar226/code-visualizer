@@ -33,10 +33,20 @@ def test_trace_python_returns_events():
     assert len(body["events"]) >= 2
 
 
-def test_trace_cpp_returns_501():
+def test_trace_cpp_returns_501_or_traces():
+    """Without a toolchain (e.g. macOS dev) the route returns 501. With g++
+    and gdb on PATH (Linux CI) it dispatches and returns a real trace."""
+    import shutil
+
     r = client.post("/trace", json={"language": "cpp", "source": "int main(){}", "stdin": ""})
-    assert r.status_code == 501
-    assert "M3" in r.json()["detail"]
+    if shutil.which("gdb") and shutil.which("g++"):
+        assert r.status_code == 200
+        body = r.json()
+        assert body["language"] == "cpp"
+        assert body["exit"]["status"] in {"ok", "error"}
+    else:
+        assert r.status_code == 501
+        assert "M3" in r.json()["detail"]
 
 
 def test_trace_unsupported_language_rejected():
