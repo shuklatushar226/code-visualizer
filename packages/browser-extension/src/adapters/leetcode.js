@@ -5,7 +5,8 @@
 // `window.monaco.editor.getModels()[0]`. This stays stable across UI
 // revamps.
 
-import { mountVisualizer } from "./_common.js";
+// Loaded after _common.js (manifest js[] order), which sets
+// window.__dsaMountVisualizer.
 
 const LANGUAGE_BY_LABEL = {
   python: "python",
@@ -14,7 +15,7 @@ const LANGUAGE_BY_LABEL = {
   "c++": "cpp",
 };
 
-mountVisualizer({
+window.__dsaMountVisualizer({
   match: () => /^\/problems\//.test(location.pathname),
   readSource: () => {
     try {

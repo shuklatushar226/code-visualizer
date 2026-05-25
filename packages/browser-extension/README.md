@@ -22,14 +22,32 @@ live in the page — differs per site.
 
 ## Build
 
-This package is plain ES modules + an HTML iframe for the panel. No build
-step required. To load in Chrome:
+```bash
+npm run build --workspace=@dsa-viz/browser-extension
+```
 
-1. Run the backend locally: `docker-compose up backend` (default `:8000`).
+Produces an unpacked extension under `dist/` containing:
+- `manifest.json`
+- `src/` (content scripts, panel HTML)
+- `src/panel/standalone.{mjs,css}` (the bundled visualizer-core)
+- `smoke.html`, `problems/two-sum/index.html` (test fixtures, harmless to ship)
+
+`EXTENSION_TEST_MATCH=1 npm run build ...` adds `http://localhost/*`
+matchers to every content_script entry — used by the Playwright
+persistent-context test (`tests/extension.spec.ts`).
+
+## Load in real Chrome (manual end-to-end)
+
+1. Run the backend locally: `uvicorn server.main:app --port 8000 --app-dir packages/backend/src`
 2. Open `chrome://extensions`, enable Developer Mode.
-3. **Load unpacked** → select this folder.
+3. **Load unpacked** → select `packages/browser-extension/dist/`.
 4. Visit `https://leetcode.com/problems/two-sum/` — a "Visualize" button
-   appears in the bottom-right.
+   appears bottom-right. Click it; the panel iframe loads, reads the
+   Monaco source, and POSTs to localhost:8000.
+
+The persistent-context Playwright test automates steps 1, 3, and 4
+against a local Monaco-mock fixture; it doesn't cover real leetcode.com
+because of DOM drift + rate limits.
 
 ## Adding a new platform
 

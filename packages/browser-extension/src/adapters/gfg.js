@@ -1,9 +1,7 @@
 // GeeksforGeeks Practice adapter (stub). GfG uses an Ace editor; the
 // instance is accessible via `window.ace.edit(<node>)`.
 
-import { mountVisualizer } from "./_common.js";
-
-mountVisualizer({
+window.__dsaMountVisualizer({
   match: () => /^\/problems\//.test(location.pathname),
   readSource: () => {
     const node = document.querySelector("#editor, .ace_editor");

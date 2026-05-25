@@ -77,7 +77,11 @@ jobs:
       - run: npm ci
       - run: npm run build --workspace=@dsa-viz/trace-schema --workspace=@dsa-viz/visualizer-core
       - run: npm run build --workspace=@dsa-viz/browser-extension
+        env:
+          EXTENSION_TEST_MATCH: "1"
       - run: npm run build --workspace=dsa-visualizer-vscode
       - run: npx playwright install --with-deps chromium
         working-directory: packages/browser-extension
-      - run: npx playwright test --config=packages/browser-extension/playwright.config.ts
+      # xvfb-run provides a display so Chromium MV3 content scripts load.
+      # Smoke test runs headless; the @persistent test needs a head.
+      - run: xvfb-run -a npx playwright test --config=packages/browser-extension/playwright.config.ts

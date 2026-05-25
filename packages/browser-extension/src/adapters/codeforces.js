@@ -1,8 +1,6 @@
 // Codeforces adapter (stub). Codeforces uses a plain <textarea id="sourceCodeTextarea">.
 
-import { mountVisualizer } from "./_common.js";
-
-mountVisualizer({
+window.__dsaMountVisualizer({
   match: () => /^\/problemset\/problem\//.test(location.pathname),
   readSource: () => {
     const ta = document.getElementById("sourceCodeTextarea");

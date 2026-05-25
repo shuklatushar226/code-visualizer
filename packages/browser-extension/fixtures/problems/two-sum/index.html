@@ -1,0 +1,37 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Two Sum (mock)</title>
+    <style>
+      body { font: 13px ui-sans-serif; background: #fafafa; color: #1a1a1a; padding: 16px; }
+      pre { background: #eee; padding: 8px; }
+    </style>
+  </head>
+  <body>
+    <h1>Mock /problems/two-sum/</h1>
+    <p>This page exists to satisfy the LeetCode adapter's URL match.
+       It stubs the parts of the LeetCode DOM the adapter consults:
+       <code>window.monaco.editor.getModels()</code>,
+       a <code>[data-cy="testcase-input"] textarea</code>, and a
+       <code>[data-cy="lang-select"] button</code>.</p>
+    <pre id="code"></pre>
+    <div data-cy="testcase-input"><textarea>[2, 7, 11, 15]</textarea></div>
+    <div data-cy="lang-select"><button>Python3</button></div>
+    <script>
+      // Stub the monaco surface that adapters/leetcode.js reads.
+      const SOURCE = "def two_sum(nums, target):\n    return [0, 1]\n\ntwo_sum([2,7,11,15], 9)\n";
+      document.getElementById("code").textContent = SOURCE;
+      window.monaco = {
+        editor: {
+          getModels() {
+            return [{
+              uri: { path: "/two-sum.py" },
+              getValue() { return SOURCE; },
+            }];
+          },
+        },
+      };
+    </script>
+  </body>
+</html>

@@ -19,25 +19,25 @@
   "content_scripts": [
     {
       "matches": ["https://leetcode.com/problems/*"],
-      "js": ["src/adapters/leetcode.js"],
+      "js": ["src/adapters/_common.js", "src/adapters/leetcode.js"],
       "css": ["src/panel.css"],
       "run_at": "document_idle"
     },
     {
       "matches": ["https://www.hackerrank.com/challenges/*"],
-      "js": ["src/adapters/hackerrank.js"],
+      "js": ["src/adapters/_common.js", "src/adapters/hackerrank.js"],
       "css": ["src/panel.css"],
       "run_at": "document_idle"
     },
     {
       "matches": ["https://practice.geeksforgeeks.org/problems/*"],
-      "js": ["src/adapters/gfg.js"],
+      "js": ["src/adapters/_common.js", "src/adapters/gfg.js"],
       "css": ["src/panel.css"],
       "run_at": "document_idle"
     },
     {
       "matches": ["https://codeforces.com/problemset/problem/*"],
-      "js": ["src/adapters/codeforces.js"],
+      "js": ["src/adapters/_common.js", "src/adapters/codeforces.js"],
       "css": ["src/panel.css"],
       "run_at": "document_idle"
     }
