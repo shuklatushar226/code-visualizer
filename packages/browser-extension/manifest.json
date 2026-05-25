@@ -44,7 +44,12 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": ["src/panel/index.html", "src/panel/index.js"],
+      "resources": [
+        "src/panel/index.html",
+        "src/panel/index.js",
+        "src/panel/standalone.mjs",
+        "src/panel/standalone.css"
+      ],
       "matches": ["<all_urls>"]
     }
   ]

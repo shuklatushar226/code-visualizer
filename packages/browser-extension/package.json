@@ -1,0 +1,15 @@
+{
+  "name": "@dsa-viz/browser-extension",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Chrome MV3 extension that injects the DSA Visualizer into LeetCode, HackerRank, GfG, and Codeforces.",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.60.0"
+  },
+  "license": "MIT"
+}

@@ -32,6 +32,9 @@ trace.json
 packages/browser-extension/dist/
 packages/browser-extension/web-ext-artifacts/
 
+# VS Code extension generated artifacts
+packages/vscode-extension/media/
+
 # VS Code extension build
 packages/vscode-extension/out/
 packages/vscode-extension/*.vsix

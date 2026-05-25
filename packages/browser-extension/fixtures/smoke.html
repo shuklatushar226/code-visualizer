@@ -1,0 +1,44 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Bundle smoke</title>
+    <link rel="stylesheet" href="./src/panel/standalone.css" />
+    <style>
+      html, body, #root { margin: 0; height: 100vh; background: #1e1e1e; color: #d4d4d4; }
+    </style>
+  </head>
+  <body>
+    <div id="root">Loading…</div>
+    <script type="module">
+      // Hardcoded trace so the smoke test has no backend dependency.
+      const trace = {
+        version: "0.1",
+        language: "python",
+        source: "a = 1\nb = 2\nc = a + b",
+        stdin: "",
+        stdout: "",
+        stderr: "",
+        exit: { status: "ok", message: null, truncated: false },
+        events: [
+          { t: 0, kind: "step", line: 1, file: "main.py",
+            stack: [{ func: "<module>", file: "main.py", line: 1, locals: {}, args: [] }],
+            heap: {}, stdout_delta: null, exception: null },
+          { t: 1, kind: "step", line: 2, file: "main.py",
+            stack: [{ func: "<module>", file: "main.py", line: 2, locals: { a: { kind: "int", v: 1 } }, args: [] }],
+            heap: {}, stdout_delta: null, exception: null },
+          { t: 2, kind: "step", line: 3, file: "main.py",
+            stack: [{ func: "<module>", file: "main.py", line: 3, locals: { a: { kind: "int", v: 1 }, b: { kind: "int", v: 2 } }, args: [] }],
+            heap: {}, stdout_delta: null, exception: null },
+          { t: 3, kind: "return", line: 3, file: "main.py",
+            stack: [{ func: "<module>", file: "main.py", line: 3, locals: { a: { kind: "int", v: 1 }, b: { kind: "int", v: 2 }, c: { kind: "int", v: 3 } }, args: [] }],
+            heap: {}, stdout_delta: null, exception: null },
+        ],
+      };
+      const { mountVisualizer } = await import("./src/panel/standalone.mjs");
+      const root = document.getElementById("root");
+      root.innerHTML = "";
+      window.__handle = mountVisualizer(root, trace);
+    </script>
+  </body>
+</html>

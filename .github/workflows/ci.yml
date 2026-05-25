@@ -62,3 +62,20 @@ jobs:
           name: playwright-trace
           path: packages/web-app/test-results/
           retention-days: 7
+
+  extensions:
+    name: M2 extension bundles
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - run: npm run build --workspace=@dsa-viz/trace-schema --workspace=@dsa-viz/visualizer-core
+      - run: npm run build --workspace=@dsa-viz/browser-extension
+      - run: npm run build --workspace=dsa-visualizer-vscode
+      - run: npx playwright install --with-deps chromium
+        working-directory: packages/browser-extension
+      - run: npx playwright test --config=packages/browser-extension/playwright.config.ts
