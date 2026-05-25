@@ -58,11 +58,11 @@ function walkList(
       return { list: out, truncated: true };
     }
     seen.add(cursor);
-    const obj = heap[cursor];
+    const obj: HeapObject | undefined = heap[cursor];
     if (!obj || obj.kind !== "object") return null;
-    const val = obj.fields.val ?? obj.fields.data ?? obj.fields.value;
-    const next = obj.fields.next;
-    const prev = obj.fields.prev;
+    const val: Value | undefined = obj.fields.val ?? obj.fields.data ?? obj.fields.value;
+    const next: Value | undefined = obj.fields.next;
+    const prev: Value | undefined = obj.fields.prev;
     out.push({
       id: cursor,
       val: val ?? { kind: "none" },

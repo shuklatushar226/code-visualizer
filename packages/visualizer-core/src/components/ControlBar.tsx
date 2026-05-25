@@ -1,7 +1,7 @@
 import React from "react";
-import type { PlaybackHandle } from "../hooks/usePlayback";
+import type { PlaybackState } from "../hooks/usePlayback";
 
-export interface ControlBarProps extends PlaybackHandle {
+export interface ControlBarProps extends PlaybackState {
   stdout?: string;
 }
 

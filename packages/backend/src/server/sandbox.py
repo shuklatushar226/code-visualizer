@@ -39,14 +39,21 @@ sys.stdout.write(json.dumps(res, ensure_ascii=False))
 
 
 def _set_child_limits() -> None:
-    # CPU seconds.
-    resource.setrlimit(resource.RLIMIT_CPU, (config.sandbox_timeout_seconds, config.sandbox_timeout_seconds))
-    # Address space (256 MiB).
-    resource.setrlimit(resource.RLIMIT_AS, (256 * 1024 * 1024, 256 * 1024 * 1024))
-    # No core dumps.
-    resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
-    # File size (10 MiB).
-    resource.setrlimit(resource.RLIMIT_FSIZE, (10 * 1024 * 1024, 10 * 1024 * 1024))
+    def _try(rlimit_name: str, value: tuple[int, int]) -> None:
+        rlimit = getattr(resource, rlimit_name, None)
+        if rlimit is None:
+            return
+        try:
+            resource.setrlimit(rlimit, value)
+        except (ValueError, OSError):
+            # Some platforms (notably macOS on Apple Silicon for RLIMIT_AS)
+            # reject these limits. Wall-clock timeout in the parent still applies.
+            pass
+
+    _try("RLIMIT_CPU", (config.sandbox_timeout_seconds, config.sandbox_timeout_seconds))
+    _try("RLIMIT_AS", (256 * 1024 * 1024, 256 * 1024 * 1024))
+    _try("RLIMIT_CORE", (0, 0))
+    _try("RLIMIT_FSIZE", (10 * 1024 * 1024, 10 * 1024 * 1024))
 
 
 def run_python_in_sandbox(source: str) -> Dict[str, Any]:
@@ -60,7 +67,10 @@ def run_python_in_sandbox(source: str) -> Dict[str, Any]:
     launcher = LAUNCHER.format(max_events=config.max_trace_events)
 
     # We pipe both: launcher via -c, source via stdin.
-    cmd = [sys.executable, "-S", "-I", "-c", launcher]
+    # Note: -S/-I were dropped because they skip site initialization,
+    # which makes installed packages (including dsa_tracer) unimportable.
+    # The wall-clock timeout and rlimits below remain the sandbox boundary.
+    cmd = [sys.executable, "-c", launcher]
 
     try:
         proc = subprocess.run(
