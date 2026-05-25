@@ -15,5 +15,12 @@ dependencies = [
     "dsa-tracer",
 ]
 
+[project.optional-dependencies]
+dev = ["pytest>=7", "httpx>=0.27"]
+
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
