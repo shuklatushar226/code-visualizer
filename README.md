@@ -95,30 +95,72 @@ code-visualizer/
 
 ---
 
-## Quick start (Python tracer)
+## Quick start
 
-The Python tracer is fully working in this scaffold. Try it now:
+### Standalone web app
 
 ```bash
-cd packages/tracer-python
-python -m pip install -e .
-dsa-trace ../../examples/python/two_sum.py --output trace.json
+# Backend (FastAPI on :8000)
+python3 -m venv .venv && source .venv/bin/activate
+pip install -e packages/tracer-python -e packages/tracer-cpp -e 'packages/backend[dev]'
+uvicorn server.main:app --port 8000 --app-dir packages/backend/src &
+
+# Web app (Vite on :5173)
+npm install
+npm run dev:web
 ```
 
-You'll get a `trace.json` file conforming to the Trace Event Protocol. Feed this
-to any front-end (web-app, browser extension, etc.) to render the visualization.
+Open http://localhost:5173, paste Python, press **Run & Visualize**.
+
+### CLI
+
+```bash
+dsa-trace examples/python/two_sum.py --output trace.json
+```
+
+Produces a `trace.json` conforming to the Trace Event Protocol; feed it
+to any of the front-ends.
+
+### Tests
+
+```bash
+npm test          # py + js unit suites (fast)
+npm run test:e2e  # Playwright e2e (slow, launches both servers)
+```
 
 ---
 
-## Roadmap
+## Roadmap status
 
-See `docs/ROADMAP.md`. The short version:
+See `docs/ROADMAP.md` for the full plan. Where things stand:
 
-* **M1 – Python MVP** *(scaffolded)*: tracer + backend + standalone web app
-* **M2 – Browser extension**: LeetCode adapter first, then HackerRank, GfG
-* **M3 – C++ support**: GDB/MI driver, struct-aware heap snapshots
-* **M4 – Pattern detection**: auto-recognize sliding window, two-pointer, DP
-* **M5 – Recursion tree view**: backtracking and DP problems
+* **M1 – Python MVP** ✅ — tracer + backend + web app, end-to-end
+* **M2 – Browser + VS Code extensions** ✅ — shared standalone bundle of
+  `visualizer-core` (React inlined) loads in the iframe / webview
+* **M3 – C++ support** ✅ — value decoders for primitives + annotated
+  structs (`<viz.hpp>` macros), gdb/MI driver, heap reconstruction by
+  pointer address; graceful 501 when gdb isn't on PATH
+* **M4 – Pattern detection** ✅ — sliding window, two pointer, binary
+  search overlays on the array view
+* **M5 – Recursion tree view** ✅ — d3-hierarchy layout of call/return
+  events, active-frame highlight
+
+**Quality floor**: 84 tests on `main` (42 pytest + 37 vitest + 5
+Playwright). GitHub Actions runs three job lanes (python matrix +
+node unit + e2e + extension bundles) on every push.
+
+**Stretch goals** (`docs/ROADMAP.md` "Stretch"):
+* Shareable links ✅ — `POST /share` + `GET /t/{code}` + UI button
+* Diff view ✅ — `diffTraces(a, b)` walks two traces in lockstep,
+  reports the first divergence
+* AI explainer — `POST /explain` route stub; wire `DSA_VIZ_AI_KEY` and a
+  provider to enable
+* Java / JS tracers — package skeletons in `packages/tracer-java`,
+  `packages/tracer-js`; route returns 501
+
+**Sandbox hardening**: `docs/SANDBOX.md` documents the production
+docker invocation; `packages/backend/Dockerfile.sandbox` and
+`sandbox.seccomp.json` are the production-ready artefacts.
 
 ---
 
