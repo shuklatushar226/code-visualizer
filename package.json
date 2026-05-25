@@ -14,6 +14,10 @@
     "build": "npm run build --workspaces --if-present",
     "dev:web": "npm run dev --workspace=web-app",
     "dev:ext": "npm run dev --workspace=browser-extension",
+    "test": "npm run test:py && npm run test:js",
+    "test:py": "python -m pytest packages/backend packages/tracer-python",
+    "test:js": "npm run test --workspace=@dsa-viz/visualizer-core",
+    "test:e2e": "npm run test --workspace=@dsa-viz/web-app",
     "lint": "echo 'TODO: add eslint config'"
   },
   "license": "MIT"
