@@ -1,0 +1,28 @@
+# Sandbox image: the bare runtime for tracing student code. Designed to
+# be invoked as a short-lived `docker run` per request, ideally with
+#   --network=none --read-only --tmpfs /tmp:size=64m
+#   --memory=256m --cpus=1
+#   --security-opt seccomp=sandbox.seccomp.json
+#
+# Optional: --runtime=runsc for kernel-level isolation via gVisor.
+
+FROM python:3.13-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    g++ gdb \
+  && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY ../tracer-python /app/tracer-python
+COPY ../tracer-cpp    /app/tracer-cpp
+
+RUN pip install --no-cache-dir /app/tracer-python /app/tracer-cpp
+
+RUN useradd -m -s /usr/sbin/nologin runner
+USER runner
+WORKDIR /tmp/work
+
+# The host injects the launcher script via -c and the source via stdin,
+# identical to the in-process sandbox path. ENTRYPOINT keeps the image
+# composable: callers append args like ["-c", "<launcher>"].
+ENTRYPOINT ["python"]

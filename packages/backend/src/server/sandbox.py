@@ -62,6 +62,9 @@ def _set_child_limits() -> None:
     _try("RLIMIT_AS", (256 * 1024 * 1024, 256 * 1024 * 1024))
     _try("RLIMIT_CORE", (0, 0))
     _try("RLIMIT_FSIZE", (10 * 1024 * 1024, 10 * 1024 * 1024))
+    # Fork-bomb defence: cap processes per uid. We give a small budget
+    # (32) because the tracer itself + subprocess imports need a few.
+    _try("RLIMIT_NPROC", (32, 32))
 
 
 def run_python_in_sandbox(source: str) -> Dict[str, Any]:

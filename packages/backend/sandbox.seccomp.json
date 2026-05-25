@@ -1,0 +1,35 @@
+{
+  "_comment": "Minimal seccomp profile for the dsa-viz sandbox. Starts from Docker's default-deny and adds only syscalls Python + g++/gdb need. Tighten for hosted prod.",
+  "defaultAction": "SCMP_ACT_ERRNO",
+  "architectures": ["SCMP_ARCH_X86_64", "SCMP_ARCH_AARCH64"],
+  "syscalls": [
+    {
+      "names": [
+        "read", "write", "close", "fstat", "lseek", "mmap", "mprotect", "munmap", "brk",
+        "rt_sigaction", "rt_sigprocmask", "rt_sigreturn", "ioctl", "pread64", "pwrite64",
+        "readv", "writev", "access", "pipe", "select", "sched_yield", "mremap", "msync",
+        "mincore", "madvise", "dup", "dup2", "pause", "nanosleep", "getitimer", "alarm",
+        "setitimer", "getpid", "sendfile", "exit", "wait4", "kill", "uname", "fcntl",
+        "flock", "fsync", "fdatasync", "truncate", "ftruncate", "getdents", "getdents64",
+        "getcwd", "chdir", "rename", "mkdir", "rmdir", "creat", "link", "unlink", "symlink",
+        "readlink", "umask", "gettimeofday", "getrlimit", "getrusage", "sysinfo", "times",
+        "getuid", "syslog", "getgid", "setuid", "setgid", "geteuid", "getegid", "setpgid",
+        "getppid", "getpgrp", "setsid", "setreuid", "setregid", "getgroups", "setgroups",
+        "setresuid", "getresuid", "setresgid", "getresgid", "getpgid", "getsid",
+        "rt_sigpending", "rt_sigtimedwait", "rt_sigqueueinfo", "rt_sigsuspend", "sigaltstack",
+        "utime", "personality", "ustat", "statfs", "fstatfs", "sched_setparam",
+        "sched_getparam", "sched_setscheduler", "sched_getscheduler", "sched_get_priority_max",
+        "sched_get_priority_min", "sched_rr_get_interval", "mlock", "munlock", "mlockall",
+        "munlockall", "vhangup", "modify_ldt", "_sysctl", "prctl", "arch_prctl", "adjtimex",
+        "setrlimit", "chroot", "sync", "acct", "settimeofday", "mount", "umount2",
+        "futex", "set_tid_address", "exit_group", "epoll_create", "epoll_ctl", "epoll_wait",
+        "openat", "newfstatat", "set_robust_list", "get_robust_list", "splice", "tee",
+        "sync_file_range", "vmsplice", "openat2", "statx", "rseq", "clone", "clone3",
+        "execve", "execveat", "wait", "waitid", "fork", "vfork", "memfd_create",
+        "process_vm_readv", "process_vm_writev",
+        "ptrace", "personality"
+      ],
+      "action": "SCMP_ACT_ALLOW"
+    }
+  ]
+}

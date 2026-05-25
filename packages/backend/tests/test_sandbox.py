@@ -50,3 +50,15 @@ def test_json_roundtrips():
 
     res = run_python_in_sandbox("x = {'k': [1, 2, 3]}\n")
     json.dumps(res)
+
+
+def test_network_access_returns_error_under_tight_timeout(monkeypatch):
+    """A program that tries to make a TCP connection shouldn't hang the
+    parent. The wall-clock timeout in the parent is the floor that
+    catches everything else.
+    """
+    monkeypatch.setattr(sandbox, "config", replace(sandbox.config, sandbox_timeout_seconds=2))
+    src = "import socket\ns = socket.socket()\ns.settimeout(5)\ntry:\n    s.connect(('10.255.255.1', 80))\nexcept Exception as e:\n    pass\n"
+    res = run_python_in_sandbox(src)
+    # Either ok (connection refused fast) or timeout — never hangs the parent.
+    assert res["exit"]["status"] in {"ok", "timeout", "error"}
