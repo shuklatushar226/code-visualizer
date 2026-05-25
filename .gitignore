@@ -41,3 +41,7 @@ packages/vscode-extension/*.vsix
 .remember/
 pytest-cache-files-*/
 dsa-viz-*.png
+
+# Playwright test outputs
+test-results/
+playwright-report/
