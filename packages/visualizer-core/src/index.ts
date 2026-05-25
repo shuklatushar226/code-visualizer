@@ -3,6 +3,7 @@ export { CodePane } from "./components/CodePane";
 export { ControlBar } from "./components/ControlBar";
 export { CallStack } from "./components/CallStack";
 export { HeapView } from "./components/HeapView";
+export { RecursionTreeView } from "./components/RecursionTreeView";
 
 export { ArrayView } from "./components/structures/ArrayView";
 export { LinkedListView } from "./components/structures/LinkedListView";
@@ -13,6 +14,8 @@ export { QueueView } from "./components/structures/QueueView";
 export { HeapTreeView } from "./components/structures/HeapTreeView";
 
 export { detectStructure } from "./lib/detectStructure";
+export { buildRecursionTree, findActiveCall, countCalls } from "./lib/recursionTree";
+export type { CallNode } from "./lib/recursionTree";
 export { usePlayback } from "./hooks/usePlayback";
 export { useTrace } from "./hooks/useTrace";
 export { traceClient } from "./lib/traceClient";

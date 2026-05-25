@@ -27,6 +27,10 @@ test("runs the default Python program and produces a trace", async ({ page }) =>
   // Wait for React to commit the new t.
   await expect(tCounter).toHaveText(new RegExp(`^t = ${max} / ${max}$`));
 
+  // The linked-list demo has 6 calls (4x Node.__init__ + reverse + <module>),
+  // so the Recursion tab auto-selects. Switch to Heap to find list views.
+  await page.locator(".dsa-viz-tabs button", { hasText: "Heap" }).click();
+
   // At the final event, the visualizer renders the reversed list. Search all
   // linked-list views for the [4,3,2,1] sequence (head/result ordering can vary).
   const allLists = await page
@@ -63,4 +67,27 @@ test("runs the two_sum example via paste and shows the seen dict growing", async
   // The source pane mirrors whatever the user pasted. That's the simplest
   // proof the trace is rendering our two_sum source, not the default.
   await expect(page.locator(".dsa-viz-codepane")).toContainText("def two_sum");
+});
+
+test("recursion tab auto-selects and renders the fib(6) tree", async ({ page }) => {
+  const fibSource = [
+    "def fib(n):",
+    "    if n < 2:",
+    "        return n",
+    "    return fib(n - 1) + fib(n - 2)",
+    "",
+    "print(fib(6))",
+  ].join("\n");
+
+  await page.goto("/");
+  await page.locator(".editor-textarea").fill(fibSource);
+  await page.getByRole("button", { name: "Run & Visualize" }).click();
+  await expect(page.locator(".dsa-viz-tcounter")).toBeVisible();
+
+  // Recursion tab should be auto-selected because call count > 5.
+  const recursionTab = page.locator(".dsa-viz-tabs button", { hasText: /^Recursion/ });
+  await expect(recursionTab).toHaveAttribute("aria-selected", "true");
+
+  // 1 <module> + 25 fib = 26 nodes for fib(6).
+  await expect(page.locator(".dsa-viz-recursion-node")).toHaveCount(26);
 });

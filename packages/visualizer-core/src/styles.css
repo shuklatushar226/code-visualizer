@@ -118,6 +118,43 @@
 }
 .dsa-viz-queue-label { color: var(--dsa-muted); font-size: 11px; }
 
+.dsa-viz-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 0 0 4px;
+  border-bottom: 1px solid #333;
+}
+.dsa-viz-tabs button {
+  background: transparent; color: var(--dsa-muted); border: 0;
+  padding: 4px 10px; font: inherit; cursor: pointer;
+  border-bottom: 2px solid transparent;
+}
+.dsa-viz-tabs button.is-active {
+  color: var(--dsa-fg); border-bottom-color: var(--dsa-accent);
+}
+
+.dsa-viz-recursion {
+  width: 100%; max-height: 360px;
+}
+.dsa-viz-recursion-edge {
+  stroke: #555; stroke-width: 1.2; fill: none;
+}
+.dsa-viz-recursion-node rect {
+  fill: #222; stroke: #555; stroke-width: 1;
+}
+.dsa-viz-recursion-node.is-active rect {
+  stroke: var(--dsa-accent); stroke-width: 2; fill: #1d3a36;
+}
+.dsa-viz-recursion-func {
+  fill: var(--dsa-accent); font-size: 11px; font-weight: 600;
+}
+.dsa-viz-recursion-args {
+  fill: var(--dsa-fg); font-size: 10px;
+}
+.dsa-viz-recursion-empty {
+  display: block; padding: 16px; color: var(--dsa-muted);
+}
+
 .dsa-viz-controlbar {
   display: flex; align-items: center; gap: 12px; padding: 4px 6px;
   background: #161616; border-radius: 6px; flex-wrap: wrap;

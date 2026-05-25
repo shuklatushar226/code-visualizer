@@ -1,10 +1,11 @@
-import React from "react";
+import React, { useMemo, useState } from "react";
 import type { Trace } from "@dsa-viz/trace-schema";
 import { usePlayback } from "../hooks/usePlayback";
 import { CodePane } from "./CodePane";
 import { ControlBar } from "./ControlBar";
 import { CallStack } from "./CallStack";
 import { HeapView } from "./HeapView";
+import { RecursionTreeView } from "./RecursionTreeView";
 
 export interface VisualizerPanelProps {
   trace: Trace;
@@ -28,6 +29,8 @@ export interface VisualizerPanelProps {
  *   │ ControlBar  ⏮  ⏯  ⏭   speed   t = 17 / 134               │
  *   └──────────────────────────────────────────────────────────┘
  */
+const RECURSION_TAB_THRESHOLD = 5;
+
 export const VisualizerPanel: React.FC<VisualizerPanelProps> = ({
   trace,
   initialT = 0,
@@ -35,6 +38,14 @@ export const VisualizerPanel: React.FC<VisualizerPanelProps> = ({
 }) => {
   const playback = usePlayback(trace.events.length, initialT);
   const event = trace.events[playback.t];
+
+  const callCount = useMemo(
+    () => trace.events.reduce((acc, e) => acc + (e.kind === "call" ? 1 : 0), 0),
+    [trace.events],
+  );
+  const [view, setView] = useState<"heap" | "recursion">(
+    callCount > RECURSION_TAB_THRESHOLD ? "recursion" : "heap",
+  );
 
   return (
     <div className={["dsa-viz-panel", className].filter(Boolean).join(" ")}>
@@ -50,12 +61,34 @@ export const VisualizerPanel: React.FC<VisualizerPanelProps> = ({
           <CallStack frames={event?.stack ?? []} />
         </div>
       </div>
+      <div className="dsa-viz-tabs" role="tablist">
+        <button
+          role="tab"
+          aria-selected={view === "heap"}
+          className={view === "heap" ? "is-active" : ""}
+          onClick={() => setView("heap")}
+        >
+          Heap
+        </button>
+        <button
+          role="tab"
+          aria-selected={view === "recursion"}
+          className={view === "recursion" ? "is-active" : ""}
+          onClick={() => setView("recursion")}
+        >
+          Recursion {callCount > 0 ? `(${callCount})` : ""}
+        </button>
+      </div>
       <div className="dsa-viz-row dsa-viz-heap">
-        <HeapView
-          heap={event?.heap ?? {}}
-          frame={event?.stack[event.stack.length - 1]}
-          annotations={trace.annotations ?? {}}
-        />
+        {view === "heap" ? (
+          <HeapView
+            heap={event?.heap ?? {}}
+            frame={event?.stack[event.stack.length - 1]}
+            annotations={trace.annotations ?? {}}
+          />
+        ) : (
+          <RecursionTreeView trace={trace} t={playback.t} />
+        )}
       </div>
       <div className="dsa-viz-row dsa-viz-controls">
         <ControlBar {...playback} stdout={trace.stdout ?? ""} />
