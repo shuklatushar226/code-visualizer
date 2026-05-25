@@ -79,18 +79,22 @@ class GdbDriver:
         return raw.get("payload", {}).get("value", "") if raw else ""
 
     def type_of(self, expr: str) -> Optional[str]:
-        """Return the textual type of an expression, or None on failure."""
-        raw = self._send(f"whatis {expr}")
-        if not raw:
-            return None
-        # Console stream output arrives in raw["payload"] as a string like
-        # "type = Node *\n"; non-result records aren't returned by _send so
-        # callers may need to parse the stream channel. Best-effort here.
-        payload = raw.get("payload")
-        if isinstance(payload, dict):
-            txt = payload.get("value") or payload.get("type")
-            if isinstance(txt, str):
-                return txt.replace("type = ", "").strip()
+        """Return the textual type of an expression, or None on failure.
+
+        `whatis` produces a `console`-stream record like ``~"type = Node *\\n"``
+        followed by an empty result. We have to scan *all* responses, not
+        just the result channel, to recover the type string.
+        """
+        records = self._send_all(f"whatis {expr}")
+        for r in records:
+            if r.get("type") != "console":
+                continue
+            payload = r.get("payload")
+            if not isinstance(payload, str):
+                continue
+            txt = payload.replace("\\n", "").strip()
+            if "type =" in txt:
+                return txt.split("type =", 1)[1].strip().rstrip(";")
         return None
 
     # ---------------------------------------------------------------- #
@@ -98,12 +102,21 @@ class GdbDriver:
     # ---------------------------------------------------------------- #
 
     def _send(self, cmd: str) -> Optional[Dict[str, Any]]:
-        """Send a GDB/MI command and return the result record, if any."""
-        responses = self._gdb.write(cmd)
-        for r in responses:
+        """Send a GDB/MI command and return the first result record, if any."""
+        for r in self._send_all(cmd):
             if r.get("type") == "result":
                 return r
         return None
+
+    def _send_all(self, cmd: str) -> List[Dict[str, Any]]:
+        """Send a GDB/MI command and return *all* response records.
+
+        GDB/MI sends a mix of channels per command — `result` (the final
+        machine-readable record), `console` (`~` stream), `log` (`&` stream),
+        `notify`, and `target`. Some commands (notably `whatis`) put their
+        useful output on the console stream and the result is empty.
+        """
+        return self._gdb.write(cmd) or []
 
 
 def compile_cpp(

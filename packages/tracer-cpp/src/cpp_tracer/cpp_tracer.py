@@ -219,9 +219,37 @@ def _struct_to_heap_object(
     addr_to_id: Dict[str, str],
     catalog: VizCatalog,
 ) -> Dict[str, Any]:
-    decoded_fields: Dict[str, Any] = {}
-    for fname, fraw in fields.items():
-        decoded_fields[fname] = _decode_value(drv, fname, fraw, heap, addr_to_id, catalog)
+    """Decode a struct's fields into a protocol HeapObject.
+
+    If the catalog has a VIZ_REGISTER_* entry for this type, narrow the
+    emitted fields to the annotated ones (val/next/prev for linked_list,
+    val/left/right for tree, adj for graph). The front-end's
+    `detectStructure` recognises these shapes by field name + class name,
+    so emitting only the annotated fields keeps the renderer choice
+    unambiguous.
+    """
+    annotation = catalog.get(type_name) if type_name else None
+    if annotation is not None:
+        keep: List[str] = [f for f in (
+            annotation.val_field,
+            annotation.next_field,
+            annotation.left_field,
+            annotation.right_field,
+            annotation.adj_field,
+        ) if f]
+        narrowed: Dict[str, str] = {k: v for k, v in fields.items() if k in keep}
+        # Preserve order matching VIZ_REGISTER_* so the front-end sees
+        # `val` before `next` (its heuristic prefers that).
+        ordered = {k: narrowed[k] for k in keep if k in narrowed}
+        decoded_fields = {
+            fname: _decode_value(drv, fname, fraw, heap, addr_to_id, catalog)
+            for fname, fraw in ordered.items()
+        }
+    else:
+        decoded_fields = {
+            fname: _decode_value(drv, fname, fraw, heap, addr_to_id, catalog)
+            for fname, fraw in fields.items()
+        }
     return {
         "kind": "object",
         "type": type_name or "object",

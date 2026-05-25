@@ -66,6 +66,53 @@ class TestParseStructFields:
         assert parse_struct_fields("not a struct") is None
 
 
+class TestStructToHeapObjectNarrowing:
+    """Verify the catalog narrows annotated structs to their declared fields.
+
+    Doesn't touch gdb — we feed the function pre-parsed fields and a
+    catalog directly.
+    """
+
+    def test_annotated_linked_list_keeps_only_val_and_next(self):
+        from cpp_tracer.cpp_tracer import _struct_to_heap_object
+        from cpp_tracer.values import VizCatalog
+
+        cat = VizCatalog()
+        cat.by_type["Node"] = {"kind": "linked_list", "val": "val", "next": "next"}
+
+        # Stub GdbDriver: only evaluate() is called by _decode_value paths
+        # for nested pointers; in this all-primitive case it's never used.
+        class StubDriver:
+            def evaluate(self, expr): return ""
+            def type_of(self, expr): return None
+
+        heap, addr_to_id = {}, {}
+        # Fields include noise that should be dropped.
+        fields = {"val": "42", "next": "0x0", "_internal_flag": "true", "padding": "0"}
+        obj = _struct_to_heap_object(StubDriver(), "Node", fields, heap, addr_to_id, cat)
+
+        assert obj["kind"] == "object"
+        assert obj["type"] == "Node"
+        # Only the annotated fields survive, in declaration order.
+        assert list(obj["fields"].keys()) == ["val", "next"]
+        assert obj["fields"]["val"] == {"kind": "int", "v": 42}
+        assert obj["fields"]["next"] == {"kind": "none"}
+
+    def test_unannotated_struct_keeps_all_fields(self):
+        from cpp_tracer.cpp_tracer import _struct_to_heap_object
+        from cpp_tracer.values import VizCatalog
+
+        cat = VizCatalog()  # no entries
+        class StubDriver:
+            def evaluate(self, expr): return ""
+            def type_of(self, expr): return None
+
+        heap, addr_to_id = {}, {}
+        fields = {"x": "1", "y": "2"}
+        obj = _struct_to_heap_object(StubDriver(), "Point", fields, heap, addr_to_id, cat)
+        assert set(obj["fields"].keys()) == {"x", "y"}
+
+
 class TestVizCatalog:
     def test_from_symbol_strings_groups_by_type(self):
         cat = VizCatalog.from_symbol_strings([

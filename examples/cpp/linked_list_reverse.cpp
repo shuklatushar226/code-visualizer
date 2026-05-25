@@ -1,17 +1,18 @@
-// Reverse a singly linked list using a hand-written Node struct.
-// Pair this with viz.hpp annotations so the tracer knows `Node*` should
-// be visualized as a linked list.
-//
-//   // @viz Node => linked_list
-//
-// The visualizer follows `next` pointers and renders the list with arrows.
+// Reverse a singly linked list. The VIZ_REGISTER_LINKED_LIST macro from
+// viz.hpp tells the C++ tracer that `Node` is a linked-list node with
+// fields `val` (the payload) and `next` (the recursive pointer). The
+// tracer then emits `{kind: "object", type: "Node", fields: {val, next}}`
+// for each node so the front-end renders the list with arrows.
+
 #include <iostream>
+#include "viz.hpp"
 
 struct Node {
     int val;
     Node* next;
     Node(int v, Node* n = nullptr) : val(v), next(n) {}
 };
+VIZ_REGISTER_LINKED_LIST(Node, val, next)
 
 Node* reverse(Node* head) {
     Node* prev = nullptr;
