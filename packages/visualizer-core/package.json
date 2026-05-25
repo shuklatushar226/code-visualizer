@@ -5,10 +5,13 @@
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "dev": "tsc -p tsconfig.json --watch"
+    "dev": "tsc -p tsconfig.json --watch",
+    "test": "vitest run"
   },
   "peerDependencies": {
     "react": ">=18",
@@ -19,9 +22,10 @@
     "d3-hierarchy": "^3.1.2"
   },
   "devDependencies": {
-    "@types/react": "^18.2.43",
     "@types/d3-hierarchy": "^3.1.6",
-    "typescript": "^5.4.5"
+    "@types/react": "^18.2.43",
+    "typescript": "^5.4.5",
+    "vitest": "^2.1.9"
   },
   "license": "MIT"
 }
