@@ -128,6 +128,20 @@ test("share button persists a trace and the resulting URL loads it back", async 
   await expect(page.locator(".dsa-viz-tcounter")).toHaveText(/^t = 0 \/ 51$/);
 });
 
+test("compare mode runs two programs and highlights the first divergence", async ({ page }) => {
+  await page.goto("/");
+  // Switch into compare mode.
+  await page.locator(".app-header select").first().selectOption("compare");
+  // Two editors should be visible.
+  await expect(page.locator(".compare-editors textarea")).toHaveCount(2);
+  // The seeded programs differ at one local; clicking Compare should diverge.
+  await page.getByRole("button", { name: "Compare" }).click();
+  await expect(page.locator(".diff-summary[data-diverged='true']")).toBeVisible();
+  await expect(page.locator(".diff-summary")).toContainText(/Diverged at event \d+/);
+  // Two side-by-side panels render.
+  await expect(page.locator(".compare-panel")).toHaveCount(2);
+});
+
 test("recursion tab auto-selects and renders the fib(6) tree", async ({ page }) => {
   const fibSource = [
     "def fib(n):",

@@ -155,6 +155,70 @@ function stepsWithArray(func: string, perStep: Value[][]): TraceEvent[] {
   return out;
 }
 
+describe("false-positive avoidance", () => {
+  it("sliding window does not fire on a plain counter that never moves twice", () => {
+    // Single advance — below the >=2 total-movements floor.
+    const events = steps("solve", [
+      { l: v(0), r: v(0) },
+      { l: v(0), r: v(1) },
+    ]);
+    expect(detectSlidingWindow(events)).toHaveLength(0);
+  });
+
+  it("sliding window does not fire on a constant pair", () => {
+    const events = steps("solve", [
+      { l: v(3), r: v(7) },
+      { l: v(3), r: v(7) },
+      { l: v(3), r: v(7) },
+      { l: v(3), r: v(7) },
+    ]);
+    expect(detectSlidingWindow(events)).toHaveLength(0);
+  });
+
+  it("two pointer does not fire on a simple nested-loop scan (both indices increase)", () => {
+    const events = steps("solve", [
+      { i: v(0), j: v(0) },
+      { i: v(0), j: v(1) },
+      { i: v(0), j: v(2) },
+      { i: v(1), j: v(0) },
+      { i: v(1), j: v(1) },
+      { i: v(1), j: v(2) },
+    ]);
+    // j goes 0,1,2,0,1,2 — not monotone, so detector should bail.
+    expect(detectTwoPointer(events)).toHaveLength(0);
+  });
+
+  it("two pointer does not fire when only one side moves", () => {
+    const events = steps("solve", [
+      { i: v(0), j: v(5) },
+      { i: v(1), j: v(5) },
+      { i: v(2), j: v(5) },
+    ]);
+    expect(detectTwoPointer(events)).toHaveLength(0);
+  });
+
+  it("binary search does not fire on a linear scan that happens to define lo/hi/mid", () => {
+    // mid follows lo+1, not floor((lo+hi)/2). Range never halves.
+    const events = steps("solve", [
+      { lo: v(0), hi: v(10), mid: v(1) },
+      { lo: v(1), hi: v(10), mid: v(2) },
+      { lo: v(2), hi: v(10), mid: v(3) },
+      { lo: v(3), hi: v(10), mid: v(4) },
+    ]);
+    expect(detectBinarySearch(events)).toHaveLength(0);
+  });
+
+  it("binary search does not fire when mid changes but the invariant breaks once", () => {
+    // mid is right on the first iteration but wrong on the second.
+    const events = steps("solve", [
+      { lo: v(0), hi: v(7), mid: v(3) },
+      { lo: v(4), hi: v(7), mid: v(99) }, // 99 != floor((4+7)/2)=5
+      { lo: v(4), hi: v(4), mid: v(4) },
+    ]);
+    expect(detectBinarySearch(events)).toHaveLength(0);
+  });
+});
+
 describe("detectDP", () => {
   it("fires on an array that fills cells in strict index order", () => {
     const INF: Value = { kind: "int", v: 999 };

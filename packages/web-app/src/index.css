@@ -112,3 +112,53 @@ body {
   font-size: 13px;
 }
 .viz-error { color: #e36b6b; white-space: pre-wrap; }
+
+/* Compare mode: two editors stacked above the input, two panels side-by-side. */
+.compare-editors {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  flex: 1;
+  min-height: 0;
+}
+
+.diff-summary {
+  padding: 8px 10px;
+  font-size: 12px;
+  border-top: 1px solid #222;
+  background: #1b1b1b;
+}
+.diff-summary[data-diverged="true"] { color: #f0c674; }
+.diff-summary[data-diverged="false"] { color: #4ec9b0; }
+
+.compare-panels {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  height: 100%;
+  min-height: 0;
+}
+.compare-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-right: 1px solid #222;
+}
+.compare-panel:last-child { border-right: 0; }
+.compare-panel-title {
+  margin: 0;
+  padding: 6px 10px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #888;
+  background: #161616;
+  border-bottom: 1px solid #222;
+}
+
+.share-link {
+  font-size: 11px;
+  color: #4ec9b0;
+  text-decoration: none;
+  margin-left: 4px;
+}

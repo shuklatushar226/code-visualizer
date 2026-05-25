@@ -17,9 +17,17 @@ Protocol JSON document on stdout. Three layers of defence stack:
 
 3. **Container (recommended for any hosted deployment)**:
    `packages/backend/Dockerfile.sandbox` builds a minimal image with
-   Python 3.13 + g++ + gdb pre-installed. Invoke per request:
+   Python 3.13 + g++ + gdb pre-installed. **Opt in** by setting
+   `USE_DOCKER_SANDBOX=1` on the backend process — the route will then
+   spawn `docker run` instead of an in-process subprocess. The full
+   docker command shape (assembled in `sandbox._docker_cmd`):
 
    ```bash
+   # Build once:
+   docker build -t dsa-viz-sandbox -f packages/backend/Dockerfile.sandbox .
+
+   # Then either rely on USE_DOCKER_SANDBOX=1 + the running backend, or
+   # invoke manually for testing:
    docker run --rm -i \
      --network=none \
      --read-only --tmpfs /tmp:size=64m,exec --tmpfs /tmp/work:size=64m,exec \
@@ -27,6 +35,9 @@ Protocol JSON document on stdout. Three layers of defence stack:
      --security-opt seccomp=$(pwd)/packages/backend/sandbox.seccomp.json \
      dsa-viz-sandbox -c "$LAUNCHER" <<< "$SOURCE"
    ```
+
+   Override the image name or seccomp profile path via
+   `DOCKER_SANDBOX_IMAGE` / `DOCKER_SECCOMP_PROFILE` env vars.
 
    The flags collectively give: no network, read-only root filesystem,
    bounded tmpfs for compilation artifacts, hard CPU + memory caps, and

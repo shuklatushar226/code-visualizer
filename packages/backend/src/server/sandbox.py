@@ -87,8 +87,13 @@ def _run_sandbox(source: str, launcher_template: str, language: str) -> Dict[str
         raise ValueError("source exceeds MAX_SOURCE_BYTES")
 
     launcher = launcher_template.format(max_events=config.max_trace_events)
-    cmd = [sys.executable, "-c", launcher]
 
+    if config.use_docker_sandbox:
+        cmd = _docker_cmd(launcher)
+    else:
+        cmd = [sys.executable, "-c", launcher]
+
+    preexec = _set_child_limits if (os.name == "posix" and not config.use_docker_sandbox) else None
     try:
         proc = subprocess.run(
             cmd,
@@ -96,7 +101,7 @@ def _run_sandbox(source: str, launcher_template: str, language: str) -> Dict[str
             capture_output=True,
             text=True,
             timeout=config.sandbox_timeout_seconds + 1,
-            preexec_fn=_set_child_limits if os.name == "posix" else None,
+            preexec_fn=preexec,
         )
     except subprocess.TimeoutExpired:
         return _timeout_trace(source, language)
@@ -126,6 +131,33 @@ def _run_sandbox(source: str, launcher_template: str, language: str) -> Dict[str
             "exit": {"status": "error", "message": str(e), "truncated": False},
             "events": [],
         }
+
+
+def _docker_cmd(launcher: str) -> list[str]:
+    """Build the `docker run` argv for one sandboxed invocation.
+
+    Flags chosen for defence in depth:
+      --network=none      no outbound traffic
+      --read-only         immutable root FS
+      --tmpfs /tmp        writable scratch with size cap
+      --memory / --cpus   cgroup caps replace per-process rlimits
+      --security-opt seccomp=...  deny-by-default syscall filter
+      --rm -i             ephemeral container, accept stdin
+
+    The image's ENTRYPOINT is `python`, so we append `-c <launcher>`.
+    """
+    return [
+        "docker", "run", "--rm", "-i",
+        "--network=none",
+        "--read-only",
+        "--tmpfs", "/tmp:size=64m,exec",
+        "--tmpfs", "/tmp/work:size=64m,exec",
+        f"--memory={256}m",
+        f"--cpus={1}",
+        "--security-opt", f"seccomp={config.docker_seccomp_profile}",
+        config.docker_sandbox_image,
+        "-c", launcher,
+    ]
 
 
 def _timeout_trace(source: str, language: str = "python") -> Dict[str, Any]:

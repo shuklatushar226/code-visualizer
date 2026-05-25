@@ -1,8 +1,10 @@
 """Shareable trace links.
 
-Process-local in-memory store keyed by a short 8-char hash. Suitable
-for single-instance demos; swap for S3+DynamoDB (or any KV store) for
-production.
+Process-local **in-memory** store keyed by a short 8-char hash. Links
+survive only as long as the backend process. Suitable for single-
+instance demos; for hosted deployments swap _STORE for a real KV
+backend (S3+DynamoDB, Redis with persistence, etc.). The wire format
+is unchanged — only the storage class needs to be swapped.
 """
 
 from __future__ import annotations

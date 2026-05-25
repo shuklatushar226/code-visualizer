@@ -62,3 +62,44 @@ def test_network_access_returns_error_under_tight_timeout(monkeypatch):
     res = run_python_in_sandbox(src)
     # Either ok (connection refused fast) or timeout — never hangs the parent.
     assert res["exit"]["status"] in {"ok", "timeout", "error"}
+
+
+def test_docker_cmd_has_required_security_flags():
+    """The docker invocation must carry the no-network, read-only, cgroup,
+    and seccomp flags. Catches accidental flag drops in future edits."""
+    cmd = sandbox._docker_cmd("import sys; print('hi')")
+    joined = " ".join(cmd)
+    assert "--network=none" in joined
+    assert "--read-only" in joined
+    assert "--memory=256m" in joined
+    assert "--cpus=1" in joined
+    assert "--security-opt" in cmd
+    # seccomp argument follows --security-opt
+    sec_idx = cmd.index("--security-opt")
+    assert cmd[sec_idx + 1].startswith("seccomp=")
+    # The image and launcher are at the end.
+    assert "-c" in cmd
+    assert cmd[-1].startswith("import sys")
+
+
+def test_docker_path_taken_when_use_docker_sandbox_set(monkeypatch):
+    """Flipping the config flag routes the runner through docker. We don't
+    actually invoke docker (it may not be installed); we intercept
+    subprocess.run and inspect what would have been called."""
+    captured: dict = {}
+
+    def fake_run(cmd, **kwargs):
+        captured["cmd"] = cmd
+        # Return a fake successful trace.
+        import types
+        rv = types.SimpleNamespace()
+        rv.returncode = 0
+        rv.stdout = '{"version": "0.1", "language": "python", "source": "", "stdin": "", "stdout": "", "stderr": "", "exit": {"status": "ok", "message": null, "truncated": false}, "events": []}'
+        rv.stderr = ""
+        return rv
+
+    monkeypatch.setattr(sandbox, "config", replace(sandbox.config, use_docker_sandbox=True))
+    monkeypatch.setattr(sandbox.subprocess, "run", fake_run)
+    run_python_in_sandbox("x = 1")
+    assert captured["cmd"][0] == "docker"
+    assert "run" in captured["cmd"]

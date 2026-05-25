@@ -27,8 +27,12 @@ export interface PlaybackState {
   setSpeed: (ms: number) => void;
 }
 
-export function usePlayback(total: number, initialSpeed = 400): PlaybackState {
-  const [t, setT] = useState(0);
+export function usePlayback(
+  total: number,
+  initialT = 0,
+  initialSpeed = 400,
+): PlaybackState {
+  const [t, setT] = useState(Math.min(Math.max(0, initialT), Math.max(0, total - 1)));
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(initialSpeed);
   const timer = useRef<number | null>(null);
