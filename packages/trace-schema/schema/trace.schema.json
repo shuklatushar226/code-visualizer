@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dsa-viz.dev/schemas/trace-v0.1.json",
+  "title": "Trace Event Protocol v0.1",
+  "type": "object",
+  "required": ["version", "language", "source", "events"],
+  "properties": {
+    "version": { "const": "0.1" },
+    "language": { "enum": ["python", "cpp"] },
+    "source": { "type": "string" },
+    "stdin": { "type": "string" },
+    "stdout": { "type": "string" },
+    "stderr": { "type": "string" },
+    "exit": {
+      "type": "object",
+      "required": ["status"],
+      "properties": {
+        "status": { "enum": ["ok", "error", "timeout"] },
+        "message": { "type": ["string", "null"] },
+        "truncated": { "type": "boolean" }
+      }
+    },
+    "events": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/TraceEvent" }
+    }
+  },
+  "$defs": {
+    "TraceEvent": {
+      "type": "object",
+      "required": ["t", "kind", "line", "file", "stack", "heap"],
+      "properties": {
+        "t": { "type": "integer", "minimum": 0 },
+        "kind": { "enum": ["step", "call", "return", "exception", "stdout"] },
+        "line": { "type": "integer", "minimum": 0 },
+        "file": { "type": "string" },
+        "stack": { "type": "array", "items": { "$ref": "#/$defs/Frame" } },
+        "heap": { "type": "object", "additionalProperties": { "$ref": "#/$defs/HeapObject" } },
+        "stdout_delta": { "type": ["string", "null"] },
+        "exception": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "required": ["type", "message"],
+              "properties": {
+                "type": { "type": "string" },
+                "message": { "type": "string" }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "Frame": {
+      "type": "object",
+      "required": ["func", "file", "line", "locals"],
+      "properties": {
+        "func": { "type": "string" },
+        "file": { "type": "string" },
+        "line": { "type": "integer" },
+        "locals": { "type": "object", "additionalProperties": { "$ref": "#/$defs/Value" } },
+        "args": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "Value": {
+      "oneOf": [
+        { "type": "object", "properties": { "kind": { "const": "int" }, "v": { "type": "integer" } }, "required": ["kind", "v"] },
+        { "type": "object", "properties": { "kind": { "const": "float" }, "v": { "type": "number" } }, "required": ["kind", "v"] },
+        { "type": "object", "properties": { "kind": { "const": "bool" }, "v": { "type": "boolean" } }, "required": ["kind", "v"] },
+        { "type": "object", "properties": { "kind": { "const": "str" }, "v": { "type": "string" } }, "required": ["kind", "v"] },
+        { "type": "object", "properties": { "kind": { "const": "none" } }, "required": ["kind"] },
+        { "type": "object", "properties": { "kind": { "const": "ref" }, "id": { "type": "string" } }, "required": ["kind", "id"] }
+      ]
+    },
+    "HeapObject": {
+      "oneOf": [
+        { "type": "object", "properties": { "kind": { "const": "list" }, "items": { "type": "array", "items": { "$ref": "#/$defs/Value" } }, "subkind": { "type": "string" } }, "required": ["kind", "items"] },
+        { "type": "object", "properties": { "kind": { "const": "tuple" }, "items": { "type": "array", "items": { "$ref": "#/$defs/Value" } } }, "required": ["kind", "items"] },
+        { "type": "object", "properties": { "kind": { "const": "set" }, "items": { "type": "array", "items": { "$ref": "#/$defs/Value" } } }, "required": ["kind", "items"] },
+        { "type": "object", "properties": { "kind": { "const": "dict" }, "entries": { "type": "array", "items": { "type": "array", "items": { "$ref": "#/$defs/Value" }, "minItems": 2, "maxItems": 2 } } }, "required": ["kind", "entries"] },
+        { "type": "object", "properties": { "kind": { "const": "object" }, "type": { "type": "string" }, "fields": { "type": "object", "additionalProperties": { "$ref": "#/$defs/Value" } } }, "required": ["kind", "type", "fields"] }
+      ]
+    }
+  }
+}

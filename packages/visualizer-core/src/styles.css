@@ -1,0 +1,135 @@
+/* Default styling for visualizer-core. Hosts can override by re-defining
+   these CSS variables or replacing the stylesheet entirely. */
+
+:root {
+  --dsa-bg: #1e1e1e;
+  --dsa-fg: #d4d4d4;
+  --dsa-line: #2a2a2a;
+  --dsa-active: #264f78;
+  --dsa-accent: #4ec9b0;
+  --dsa-muted: #888;
+  --dsa-num: #b5cea8;
+  --dsa-str: #ce9178;
+  --dsa-ref: #c586c0;
+  --dsa-bool: #569cd6;
+}
+
+.dsa-viz-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--dsa-bg);
+  color: var(--dsa-fg);
+  font-family: ui-monospace, "JetBrains Mono", "SF Mono", Menlo, monospace;
+  font-size: 13px;
+  padding: 8px;
+  height: 100%;
+  min-height: 360px;
+}
+
+.dsa-viz-row { display: flex; gap: 8px; }
+.dsa-viz-top { flex: 0 1 auto; }
+.dsa-viz-codecol { flex: 1 1 60%; min-width: 0; }
+.dsa-viz-stackcol { flex: 1 1 40%; min-width: 0; overflow: auto; }
+
+.dsa-viz-codepane {
+  background: #161616;
+  border-radius: 6px;
+  padding: 8px;
+  margin: 0;
+  overflow: auto;
+  max-height: 320px;
+}
+.dsa-viz-codeline { display: flex; padding: 0 4px; }
+.dsa-viz-codeline.is-active { background: var(--dsa-active); }
+.dsa-viz-gutter {
+  width: 32px;
+  text-align: right;
+  color: var(--dsa-muted);
+  margin-right: 8px;
+  user-select: none;
+}
+.dsa-viz-linebody { white-space: pre; }
+
+.dsa-viz-callstack { background: #161616; border-radius: 6px; padding: 8px; }
+.dsa-viz-section-title { font-size: 12px; margin: 0 0 4px; color: var(--dsa-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.dsa-viz-frames { list-style: none; padding: 0; margin: 0; }
+.dsa-viz-frame { border: 1px solid #333; border-radius: 4px; padding: 4px 6px; margin-bottom: 4px; }
+.dsa-viz-frame.is-top { border-color: var(--dsa-accent); }
+.dsa-viz-frame-func { color: var(--dsa-accent); font-weight: 600; }
+.dsa-viz-frame-line { color: var(--dsa-muted); }
+.dsa-viz-locals { font-size: 12px; width: 100%; }
+.dsa-viz-local-name { color: var(--dsa-muted); padding-right: 8px; vertical-align: top; }
+
+.dsa-viz-chip { padding: 1px 4px; border-radius: 3px; border: 1px solid #333; }
+.dsa-viz-chip.is-num { color: var(--dsa-num); }
+.dsa-viz-chip.is-str { color: var(--dsa-str); }
+.dsa-viz-chip.is-ref { color: var(--dsa-ref); }
+.dsa-viz-chip.is-bool { color: var(--dsa-bool); }
+
+.dsa-viz-heapview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-start;
+}
+.dsa-viz-heap-card {
+  background: #161616;
+  border-radius: 6px;
+  padding: 8px;
+  min-width: 200px;
+}
+.dsa-viz-heap-card header {
+  display: flex; justify-content: space-between; margin-bottom: 6px;
+}
+.dsa-viz-heap-kind { color: var(--dsa-muted); font-size: 11px; }
+
+.dsa-viz-array-cells { display: flex; flex-wrap: wrap; gap: 4px; }
+.dsa-viz-cell {
+  display: flex; flex-direction: column; align-items: center;
+  min-width: 32px; padding: 4px; background: #222; border: 1px solid #444;
+  border-radius: 4px;
+}
+.dsa-viz-cell-index { font-size: 10px; color: var(--dsa-muted); }
+
+.dsa-viz-linkedlist { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.dsa-viz-node {
+  display: flex; flex-direction: column; align-items: center;
+  background: #222; border: 1px solid #555; border-radius: 4px; padding: 4px 6px;
+  min-width: 36px;
+}
+.dsa-viz-node-id { font-size: 10px; color: var(--dsa-muted); }
+.dsa-viz-arrow { color: var(--dsa-accent); }
+.dsa-viz-cycle-marker { color: #e0c080; }
+
+.dsa-viz-stack { display: flex; flex-direction: column; align-items: stretch; gap: 2px; max-width: 120px; }
+.dsa-viz-stack-cell {
+  border: 1px solid #555; background: #222; border-radius: 3px;
+  padding: 4px; display: flex; justify-content: space-between;
+}
+.dsa-viz-stack-cell.is-top { border-color: var(--dsa-accent); }
+.dsa-viz-stack-label { color: var(--dsa-muted); font-size: 10px; text-align: center; }
+
+.dsa-viz-queue { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.dsa-viz-queue-cells { display: flex; gap: 2px; }
+.dsa-viz-queue-cell {
+  display: flex; flex-direction: column; align-items: center;
+  border: 1px solid #555; background: #222; padding: 4px;
+}
+.dsa-viz-queue-label { color: var(--dsa-muted); font-size: 11px; }
+
+.dsa-viz-controlbar {
+  display: flex; align-items: center; gap: 12px; padding: 4px 6px;
+  background: #161616; border-radius: 6px; flex-wrap: wrap;
+}
+.dsa-viz-buttons { display: flex; gap: 4px; }
+.dsa-viz-buttons button {
+  background: #333; color: var(--dsa-fg); border: 1px solid #555;
+  border-radius: 3px; padding: 2px 8px; cursor: pointer;
+}
+.dsa-viz-buttons button:disabled { opacity: 0.4; cursor: default; }
+.dsa-viz-scrub { display: flex; align-items: center; gap: 6px; flex: 1; }
+.dsa-viz-scrub input[type="range"] { flex: 1; }
+.dsa-viz-tcounter { font-size: 11px; color: var(--dsa-muted); }
+.dsa-viz-stdout { font-size: 11px; max-width: 240px; }
+.dsa-viz-stdout pre { background: #0d0d0d; padding: 4px; max-height: 80px; overflow: auto; }

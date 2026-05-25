@@ -1,0 +1,15 @@
+{
+  "name": "@dsa-viz/trace-schema",
+  "version": "0.1.0",
+  "description": "Trace Event Protocol — shared TypeScript types & JSON Schema.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist", "schema"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5"
+  },
+  "license": "MIT"
+}

@@ -1,0 +1,25 @@
+version: "3.9"
+
+services:
+  backend:
+    build:
+      context: ./packages/backend
+    container_name: dsa-visualizer-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - SANDBOX_TIMEOUT_SECONDS=5
+      - MAX_TRACE_EVENTS=5000
+      - ALLOWED_ORIGINS=http://localhost:5173,chrome-extension://*
+    # Note: real deploys should add `read_only`, `cap_drop`, seccomp profile.
+
+  web:
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - ./:/app
+    command: sh -c "cd packages/web-app && npm install && npm run dev -- --host 0.0.0.0"
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend

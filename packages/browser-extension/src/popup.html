@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>DSA Visualizer</title>
+    <style>
+      body { font: 13px/1.4 system-ui, sans-serif; width: 240px; padding: 12px; }
+      label { display: block; margin-bottom: 8px; }
+      input { width: 100%; box-sizing: border-box; padding: 4px; }
+      button { margin-top: 6px; }
+    </style>
+  </head>
+  <body>
+    <h2 style="margin:0 0 8px;font-size:14px;">DSA Visualizer</h2>
+    <label>
+      Backend URL
+      <input id="backend" type="text" placeholder="http://localhost:8000" />
+    </label>
+    <button id="save">Save</button>
+    <p id="status" style="font-size:11px;color:#666"></p>
+    <script src="popup.js"></script>
+  </body>
+</html>

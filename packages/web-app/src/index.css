@@ -1,0 +1,114 @@
+/* Page-level styles for the standalone web app shell. The visualizer itself
+   carries its own dark theme via @dsa-viz/visualizer-core/src/styles.css. */
+
+* { box-sizing: border-box; }
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: #0f0f10;
+  color: #eaeaea;
+}
+
+.app-shell {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  height: 100%;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-bottom: 1px solid #222;
+  background: #161616;
+}
+
+.app-header h1 {
+  font-size: 16px;
+  margin: 0;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.app-header .meta {
+  font-size: 12px;
+  color: #888;
+}
+
+.app-body {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  min-height: 0;
+}
+
+.editor-pane {
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid #222;
+  min-height: 0;
+}
+
+.editor-toolbar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 12px;
+  background: #161616;
+  border-bottom: 1px solid #222;
+  flex-wrap: wrap;
+}
+
+.editor-toolbar label { font-size: 12px; color: #aaa; }
+.editor-toolbar select,
+.editor-toolbar input[type="text"] {
+  background: #0f0f10;
+  color: #eaeaea;
+  border: 1px solid #333;
+  border-radius: 4px;
+  padding: 4px 6px;
+  font-size: 12px;
+}
+
+.editor-toolbar button {
+  background: #2a5fd6;
+  color: #fff;
+  border: 0;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+}
+.editor-toolbar button:disabled { opacity: 0.5; cursor: default; }
+
+.editor-textarea {
+  flex: 1;
+  background: #0f0f10;
+  color: #eaeaea;
+  border: 0;
+  padding: 12px;
+  font-family: ui-monospace, "JetBrains Mono", monospace;
+  font-size: 13px;
+  resize: none;
+  outline: none;
+  min-height: 0;
+}
+
+.viz-pane {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: #0f0f10;
+}
+
+.viz-empty, .viz-error {
+  padding: 24px;
+  color: #888;
+  font-size: 13px;
+}
+.viz-error { color: #e36b6b; white-space: pre-wrap; }

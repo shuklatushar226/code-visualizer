@@ -1,0 +1,55 @@
+{
+  "name": "dsa-visualizer-vscode",
+  "displayName": "DSA Visualizer",
+  "description": "Step through your code line by line with structure-aware visuals.",
+  "version": "0.1.0",
+  "publisher": "dsa-viz",
+  "engines": { "vscode": "^1.85.0" },
+  "categories": ["Education", "Debuggers", "Visualization"],
+  "activationEvents": [
+    "onCommand:dsaViz.visualize",
+    "onLanguage:python",
+    "onLanguage:cpp"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "dsaViz.visualize",
+        "title": "DSA Visualizer: Visualize Current File",
+        "category": "DSA Visualizer"
+      }
+    ],
+    "configuration": {
+      "title": "DSA Visualizer",
+      "properties": {
+        "dsaViz.backendUrl": {
+          "type": "string",
+          "default": "http://localhost:8000",
+          "description": "URL of the dsa-viz backend."
+        },
+        "dsaViz.maxEvents": {
+          "type": "number",
+          "default": 5000,
+          "description": "Cap on the number of trace events recorded."
+        }
+      }
+    },
+    "keybindings": [
+      {
+        "command": "dsaViz.visualize",
+        "key": "ctrl+alt+v",
+        "mac": "cmd+alt+v",
+        "when": "editorTextFocus"
+      }
+    ]
+  },
+  "scripts": {
+    "compile": "tsc -p ."
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.4.5"
+  }
+}

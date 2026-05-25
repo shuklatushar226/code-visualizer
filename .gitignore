@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+
+# Node
+node_modules/
+dist/
+build/
+*.tsbuildinfo
+.parcel-cache/
+.vite/
+
+# Editors
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local traces & logs
+*.trace.json
+trace.json
+*.log
+
+# Browser extension build
+packages/browser-extension/dist/
+packages/browser-extension/web-ext-artifacts/
+
+# VS Code extension build
+packages/vscode-extension/out/
+packages/vscode-extension/*.vsix
+
+# Session artifacts (Playwright, screenshots, local memory)
+.playwright-mcp/
+.remember/
+pytest-cache-files-*/
+dsa-viz-*.png
