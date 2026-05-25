@@ -33,4 +33,12 @@ def trace(req: TraceRequest):
                 ),
             )
         return run_cpp_in_sandbox(req.source)
+    if req.language in {"java", "javascript", "js"}:
+        raise HTTPException(
+            status_code=501,
+            detail=(
+                f"{req.language} tracing is a stretch goal — "
+                "packages/tracer-{java,js} contain skeletons; see docs/ROADMAP.md."
+            ),
+        )
     raise HTTPException(status_code=400, detail=f"Unsupported language: {req.language}")

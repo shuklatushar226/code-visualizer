@@ -49,3 +49,21 @@ def test_trace_oversized_source_rejected_by_pydantic():
     huge = "x = 1\n" * 50_000  # 300_000 bytes
     r = client.post("/trace", json={"language": "python", "source": huge, "stdin": ""})
     assert r.status_code == 422
+
+
+def test_trace_java_returns_501_with_skeleton_message():
+    r = client.post("/trace", json={"language": "java", "source": "class A {}", "stdin": ""})
+    assert r.status_code == 501
+    assert "stretch" in r.json()["detail"].lower()
+
+
+def test_trace_javascript_returns_501():
+    r = client.post("/trace", json={"language": "javascript", "source": "const x=1;", "stdin": ""})
+    assert r.status_code == 501
+
+
+def test_explain_returns_501_without_api_key(monkeypatch):
+    monkeypatch.delenv("DSA_VIZ_AI_KEY", raising=False)
+    r = client.post("/explain", json={"event": {"line": 1}, "source": "x = 1"})
+    assert r.status_code == 501
+    assert "stretch-goal" in r.json()["detail"].lower() or "key" in r.json()["detail"].lower()

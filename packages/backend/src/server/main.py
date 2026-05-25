@@ -8,7 +8,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import config
-from .routes import health, trace
+from .routes import explain, health, share, trace
 
 app = FastAPI(
     title="DSA Code Visualizer Backend",
@@ -26,3 +26,5 @@ app.add_middleware(
 
 app.include_router(health.router)
 app.include_router(trace.router)
+app.include_router(share.router)
+app.include_router(explain.router)

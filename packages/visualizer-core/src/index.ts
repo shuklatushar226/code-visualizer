@@ -18,6 +18,8 @@ export { buildRecursionTree, findActiveCall, countCalls } from "./lib/recursionT
 export type { CallNode } from "./lib/recursionTree";
 export { detectPatterns, activePatternHit } from "./lib/patterns";
 export type { PatternHit, PatternKind } from "./lib/patterns";
+export { diffTraces } from "./lib/diffTraces";
+export type { TraceDiff, TraceDivergence } from "./lib/diffTraces";
 export { usePlayback } from "./hooks/usePlayback";
 export { useTrace } from "./hooks/useTrace";
 export { traceClient } from "./lib/traceClient";

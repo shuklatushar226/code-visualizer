@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import type { Trace } from "@dsa-viz/trace-schema";
 import { VisualizerPanel, traceClient } from "@dsa-viz/visualizer-core";
 
@@ -56,6 +56,26 @@ export const App: React.FC = () => {
   const [trace, setTrace] = useState<Trace | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
+
+  // Load a shared trace from ?t=<code> on first paint.
+  useEffect(() => {
+    const code = new URLSearchParams(location.search).get("t");
+    if (!code) return;
+    void (async () => {
+      try {
+        const r = await fetch(`${backend}/t/${encodeURIComponent(code)}`);
+        if (!r.ok) throw new Error(`backend returned ${r.status}`);
+        const loaded = (await r.json()) as Trace;
+        setTrace(loaded);
+        setSource(loaded.source);
+        setLanguage(loaded.language as Lang);
+      } catch (e) {
+        setErr(`Failed to load shared trace: ${String(e)}`);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function onLanguageChange(next: Lang) {
     setLanguage(next);
@@ -79,6 +99,7 @@ export const App: React.FC = () => {
     setBusy(true);
     setErr(null);
     setTrace(null);
+    setShareUrl(null);
     try {
       const client = traceClient(backend);
       const t = await client.trace({ source, stdin, language });
@@ -87,6 +108,28 @@ export const App: React.FC = () => {
       setErr(String(e));
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function share() {
+    if (!trace) return;
+    try {
+      const r = await fetch(`${backend}/share`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ trace }),
+      });
+      if (!r.ok) throw new Error(`backend returned ${r.status}`);
+      const body = (await r.json()) as { code: string; url: string };
+      const fullUrl = `${location.origin}${location.pathname}?t=${body.code}`;
+      setShareUrl(fullUrl);
+      try {
+        await navigator.clipboard?.writeText(fullUrl);
+      } catch {
+        /* clipboard denied in some contexts */
+      }
+    } catch (e) {
+      setErr(`Share failed: ${String(e)}`);
     }
   }
 
@@ -131,6 +174,14 @@ export const App: React.FC = () => {
             <button onClick={run} disabled={busy}>
               {busy ? "Tracing…" : "Run & Visualize"}
             </button>
+            <button onClick={share} disabled={!trace} title="Save and copy a shareable link">
+              Share
+            </button>
+            {shareUrl && (
+              <a className="share-link" href={shareUrl} title="Link copied">
+                copied ✓
+              </a>
+            )}
           </div>
           <textarea
             className="editor-textarea"

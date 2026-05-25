@@ -111,6 +111,23 @@ test("binary-search example produces a pattern overlay on the array", async ({ p
   expect(await page.locator(".dsa-viz-cell.is-mid").count()).toBe(1);
 });
 
+test("share button persists a trace and the resulting URL loads it back", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Run & Visualize" }).click();
+  await expect(page.locator(".dsa-viz-tcounter")).toBeVisible();
+
+  await page.getByRole("button", { name: "Share" }).click();
+  const link = page.locator(".share-link");
+  await expect(link).toBeVisible();
+  const href = await link.getAttribute("href");
+  expect(href).toMatch(/\?t=[a-f0-9]{8}$/);
+
+  await page.goto(href!);
+  await expect(page.locator(".dsa-viz-tcounter")).toBeVisible();
+  // The restored trace should have the same total events.
+  await expect(page.locator(".dsa-viz-tcounter")).toHaveText(/^t = 0 \/ 51$/);
+});
+
 test("recursion tab auto-selects and renders the fib(6) tree", async ({ page }) => {
   const fibSource = [
     "def fib(n):",
