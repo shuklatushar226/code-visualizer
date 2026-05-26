@@ -28,6 +28,13 @@ class GdbDriver:
         self._gdb = GdbController()
         self._binary = binary_path
         self._send(f"-file-exec-and-symbols {binary_path}")
+        # Pretty-printing is a prerequisite for the var-object walker to see
+        # STL containers as their logical children (vector of N) instead of
+        # their internal _M_impl fields. libstdc++ ≥10 auto-loads its
+        # printers; this is belt-and-suspenders for older distros.
+        self._send("-gdb-set print pretty on")
+        self._send("-gdb-set print object on")
+        self._var_counter = 0
 
     # ---------------------------------------------------------------- #
     # session control
@@ -96,6 +103,54 @@ class GdbDriver:
             if "type =" in txt:
                 return txt.split("type =", 1)[1].strip().rstrip(";")
         return None
+
+    # ---------------------------------------------------------------- #
+    # variable objects — the STL walker
+    # ---------------------------------------------------------------- #
+
+    def var_create(self, expr: str) -> Optional[Dict[str, Any]]:
+        """Create a GDB/MI variable object for `expr`.
+
+        Returns a dict like ``{"name": "vN", "numchild": "4", "type": "..."}``
+        (gdb returns numchild as a string; the caller should coerce). Returns
+        None if creation fails (e.g. expr unevaluable in current frame).
+
+        Variable objects are gdb's IDE-friendly walker: every container's
+        children are exposed as named sub-objects with their own types,
+        which is how pygdbmi-driven IDEs like VS Code's cpptools render
+        std::vector et al without parsing pretty-printer text.
+        """
+        self._var_counter += 1
+        name = f"v{self._var_counter}"
+        # `*` = floating frame (auto-track current frame).
+        raw = self._send(f"-var-create {name} * {expr}")
+        if not raw or raw.get("message") == "error":
+            return None
+        payload = raw.get("payload") or {}
+        payload["name"] = name
+        return payload
+
+    def var_list_children(self, var_name: str) -> List[Dict[str, Any]]:
+        """List the children of a variable object created by var_create.
+
+        Each child is a dict with at least ``name``, ``exp``, ``numchild``,
+        and (for primitive leaves) ``value``. Non-primitive children require
+        another var-create on their ``exp`` to expand.
+
+        `--all-values` asks gdb to include the formatted value for primitive
+        children inline, so simple types come back in one round-trip.
+        """
+        raw = self._send(f"-var-list-children --all-values {var_name}")
+        if not raw:
+            return []
+        payload = raw.get("payload") or {}
+        return payload.get("children", []) or []
+
+    def var_delete(self, var_name: str) -> None:
+        """Tear down a variable object. Safe to call on a None / missing name."""
+        if not var_name:
+            return
+        self._send(f"-var-delete {var_name}")
 
     # ---------------------------------------------------------------- #
     # internals

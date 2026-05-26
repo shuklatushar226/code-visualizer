@@ -24,6 +24,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from .gdb_driver import GdbDriver, compile_cpp
+from .stl import decode_stl
 from .values import (
     VizAnnotation,
     VizCatalog,
@@ -165,6 +166,21 @@ def _decode_value(
     scalar = parse_scalar(raw)
     if scalar is not None:
         return scalar
+
+    # STL containers via gdb var-objects. Check before pointer dispatch
+    # because some STL types' pretty-printer output happens to look like
+    # `{...}` braces and would otherwise hit the struct branch below.
+    type_str = drv.type_of(expr)
+    if type_str:
+        stl_obj = decode_stl(drv, expr, type_str, heap, addr_to_id, catalog, _decode_value)
+        if stl_obj is not None:
+            # Scalar leaf (std::string) returns a Value directly.
+            if stl_obj.get("kind") in ("str", "int", "float", "bool", "none"):
+                return stl_obj
+            # Container -> stash on the heap with a synthetic id.
+            synthetic_id = f"h_stl_{len(heap)}"
+            heap[synthetic_id] = stl_obj
+            return {"kind": "ref", "id": synthetic_id}
 
     # Pointer-shaped output: "0xADDR <symbol>" or "0xADDR ..."
     addr = parse_pointer(raw)
