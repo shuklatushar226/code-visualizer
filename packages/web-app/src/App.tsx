@@ -28,6 +28,15 @@ head = Node(1, Node(2, Node(3, Node(4))))
 result = reverse(head)
 `;
 
+const DEFAULT_JAVASCRIPT = `// DSA Visualizer demo (JavaScript): naive recursive Fibonacci.
+function fib(n) {
+    if (n < 2) return n;
+    return fib(n - 1) + fib(n - 2);
+}
+
+console.log(fib(5));
+`;
+
 const DEFAULT_CPP = `// DSA Visualizer demo (C++): in-place array reversal.
 #include <vector>
 #include <iostream>
@@ -68,7 +77,7 @@ const DIFF_RIGHT = `def solve(n):
 solve(5)
 `;
 
-type Lang = "python" | "cpp";
+type Lang = "python" | "cpp" | "javascript";
 type Mode = "single" | "compare";
 
 export const App: React.FC = () => {
@@ -110,11 +119,17 @@ export const App: React.FC = () => {
 
   function onLanguageChange(next: Lang) {
     setLanguage(next);
-    if (next === "python" && source.trim() === DEFAULT_CPP.trim()) {
-      setSource(DEFAULT_PYTHON);
-    } else if (next === "cpp" && source.trim() === DEFAULT_PYTHON.trim()) {
-      setSource(DEFAULT_CPP);
-    }
+    // Swap in the new language's default ONLY if the editor still
+    // contains one of the OTHER languages' defaults — preserves any
+    // edits the user made.
+    const isAnyDefault =
+      source.trim() === DEFAULT_PYTHON.trim() ||
+      source.trim() === DEFAULT_CPP.trim() ||
+      source.trim() === DEFAULT_JAVASCRIPT.trim();
+    if (!isAnyDefault) return;
+    if (next === "python") setSource(DEFAULT_PYTHON);
+    else if (next === "cpp") setSource(DEFAULT_CPP);
+    else if (next === "javascript") setSource(DEFAULT_JAVASCRIPT);
   }
 
   function onBackendChange(next: string) {
@@ -261,6 +276,7 @@ export const App: React.FC = () => {
                 >
                   <option value="python">Python</option>
                   <option value="cpp">C++</option>
+                  <option value="javascript">JavaScript</option>
                 </select>
               </label>
               <label className="stdin">
@@ -344,6 +360,7 @@ export const App: React.FC = () => {
                 >
                   <option value="python">Python</option>
                   <option value="cpp">C++</option>
+                  <option value="javascript">JavaScript</option>
                 </select>
               </label>
               <button onClick={compare} disabled={busy}>

@@ -67,9 +67,24 @@ def test_trace_java_returns_501_with_skeleton_message():
     assert "stretch" in r.json()["detail"].lower()
 
 
-def test_trace_javascript_returns_501():
-    r = client.post("/trace", json={"language": "javascript", "source": "const x=1;", "stdin": ""})
-    assert r.status_code == 501
+def test_trace_javascript_returns_501_or_traces():
+    """Mirror of the cpp test: when `node` is on PATH the JS tracer
+    dispatches and returns a real trace; otherwise the route returns
+    501 with an instructive message. Both branches must validate."""
+    import shutil
+
+    r = client.post(
+        "/trace",
+        json={"language": "javascript", "source": "const x=1;\nconst y=2;\n", "stdin": ""},
+    )
+    if shutil.which("node"):
+        assert r.status_code == 200
+        body = r.json()
+        assert body["language"] == "javascript"
+        assert body["exit"]["status"] in {"ok", "error"}
+    else:
+        assert r.status_code == 501
+        assert "node" in r.json()["detail"].lower()
 
 
 def test_explain_returns_501_without_api_key(monkeypatch):

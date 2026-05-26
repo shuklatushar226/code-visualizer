@@ -8,7 +8,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from ..config import config
-from ..sandbox import run_cpp_in_sandbox, run_python_in_sandbox
+from ..sandbox import run_cpp_in_sandbox, run_js_in_sandbox, run_python_in_sandbox
 
 router = APIRouter()
 
@@ -33,12 +33,22 @@ def trace(req: TraceRequest):
                 ),
             )
         return run_cpp_in_sandbox(req.source)
-    if req.language in {"java", "javascript", "js"}:
+    if req.language in {"javascript", "js"}:
+        if not shutil.which("node"):
+            raise HTTPException(
+                status_code=501,
+                detail=(
+                    "JavaScript tracing requires node on PATH. "
+                    "Install Node.js ≥18 to enable; see docs/ROADMAP.md."
+                ),
+            )
+        return run_js_in_sandbox(req.source)
+    if req.language == "java":
         raise HTTPException(
             status_code=501,
             detail=(
-                f"{req.language} tracing is a stretch goal — "
-                "packages/tracer-{java,js} contain skeletons; see docs/ROADMAP.md."
+                "Java tracing is a stretch goal — "
+                "packages/tracer-java contains a skeleton; see docs/ROADMAP.md."
             ),
         )
     raise HTTPException(status_code=400, detail=f"Unsupported language: {req.language}")

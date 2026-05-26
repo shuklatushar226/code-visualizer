@@ -9,14 +9,15 @@
 FROM python:3.13-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    g++ gdb \
+    g++ gdb nodejs \
   && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 COPY ../tracer-python /app/tracer-python
 COPY ../tracer-cpp    /app/tracer-cpp
+COPY ../tracer-js     /app/tracer-js
 
-RUN pip install --no-cache-dir /app/tracer-python /app/tracer-cpp
+RUN pip install --no-cache-dir /app/tracer-python /app/tracer-cpp /app/tracer-js
 
 RUN useradd -m -s /usr/sbin/nologin runner
 USER runner
