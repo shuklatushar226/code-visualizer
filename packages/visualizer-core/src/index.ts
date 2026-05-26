@@ -4,6 +4,7 @@ export { ControlBar } from "./components/ControlBar";
 export { CallStack } from "./components/CallStack";
 export { HeapView } from "./components/HeapView";
 export { RecursionTreeView } from "./components/RecursionTreeView";
+export { Explainer } from "./components/Explainer";
 
 export { ArrayView } from "./components/structures/ArrayView";
 export { LinkedListView } from "./components/structures/LinkedListView";

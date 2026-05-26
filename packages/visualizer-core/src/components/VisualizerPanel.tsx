@@ -9,6 +9,7 @@ import {
 import { CodePane } from "./CodePane";
 import { ControlBar } from "./ControlBar";
 import { CallStack } from "./CallStack";
+import { Explainer } from "./Explainer";
 import { HeapView, type PatternOverlayState } from "./HeapView";
 import { RecursionTreeView } from "./RecursionTreeView";
 
@@ -18,6 +19,10 @@ export interface VisualizerPanelProps {
   initialT?: number;
   /** Optional className for the outer container. */
   className?: string;
+  /** When true, mount the AI Explainer panel below the controls. */
+  showExplainer?: boolean;
+  /** Backend URL the Explainer streams from. Required when showExplainer is true. */
+  explainerBackend?: string;
 }
 
 /**
@@ -40,6 +45,8 @@ export const VisualizerPanel: React.FC<VisualizerPanelProps> = ({
   trace,
   initialT = 0,
   className,
+  showExplainer = false,
+  explainerBackend,
 }) => {
   const playback = usePlayback(trace.events.length, initialT);
   const event = trace.events[playback.t];
@@ -105,6 +112,11 @@ export const VisualizerPanel: React.FC<VisualizerPanelProps> = ({
       <div className="dsa-viz-row dsa-viz-controls">
         <ControlBar {...playback} stdout={trace.stdout ?? ""} />
       </div>
+      {showExplainer && explainerBackend && (
+        <div className="dsa-viz-row dsa-viz-explainer-row">
+          <Explainer trace={trace} t={playback.t} backend={explainerBackend} />
+        </div>
+      )}
     </div>
   );
 };

@@ -86,6 +86,9 @@ export const App: React.FC = () => {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [explain, setExplain] = useState<boolean>(
+    () => localStorage.getItem("dsaViz.explain") === "1",
+  );
 
   useEffect(() => {
     const code = new URLSearchParams(location.search).get("t");
@@ -223,6 +226,21 @@ export const App: React.FC = () => {
                 style={{ width: 220 }}
               />
             </label>
+            <label className="explain-toggle">
+              <input
+                type="checkbox"
+                checked={explain}
+                onChange={(e) => {
+                  setExplain(e.target.checked);
+                  try {
+                    localStorage.setItem("dsaViz.explain", e.target.checked ? "1" : "0");
+                  } catch {
+                    /* private mode */
+                  }
+                }}
+              />{" "}
+              ✦ explain
+            </label>
           </span>
         </div>
         <p className="tagline">
@@ -305,7 +323,13 @@ export const App: React.FC = () => {
                 </div>
               </div>
             )}
-            {trace && <VisualizerPanel trace={trace} />}
+            {trace && (
+              <VisualizerPanel
+                trace={trace}
+                showExplainer={explain}
+                explainerBackend={backend}
+              />
+            )}
           </section>
         </div>
       ) : (

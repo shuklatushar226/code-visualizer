@@ -570,3 +570,51 @@
   margin: var(--space-2) 0 0;
   color: var(--dsa-fg);
 }
+
+/* — Explainer (AI sidebar, opt-in via showExplainer prop) — */
+.dsa-viz-explainer-row {
+  display: block;
+}
+.dsa-viz-explainer {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: var(--dsa-paper);
+  border: var(--rule) solid var(--dsa-rule);
+  border-left: 2px solid var(--dsa-accent);
+  border-radius: var(--radius-md);
+  align-items: flex-start;
+  min-height: 48px;
+}
+.dsa-viz-explainer-label {
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  color: var(--dsa-accent);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-weight: 500;
+  flex: 0 0 auto;
+  padding-top: 2px;
+  min-width: 84px;
+}
+.dsa-viz-explainer-body {
+  flex: 1;
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: 1.5;
+  color: var(--dsa-fg);
+}
+.dsa-viz-explainer-muted {
+  color: var(--dsa-muted);
+  font-style: italic;
+}
+.dsa-viz-explainer-text {
+  color: var(--dsa-fg);
+}
+.dsa-viz-explainer[data-status="loading"] .dsa-viz-explainer-label {
+  animation: explainer-pulse 1.2s ease-in-out infinite;
+}
+@keyframes explainer-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}

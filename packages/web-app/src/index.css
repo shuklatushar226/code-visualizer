@@ -123,6 +123,16 @@ body {
   gap: 6px;
   align-items: center;
 }
+.app-header .meta label.explain-toggle {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--accent);
+  font-size: 11px;
+  cursor: pointer;
+}
+.app-header .meta label.explain-toggle input[type="checkbox"] {
+  accent-color: var(--accent);
+}
 .app-header .meta select,
 .app-header .meta input[type="text"] {
   background: transparent;
