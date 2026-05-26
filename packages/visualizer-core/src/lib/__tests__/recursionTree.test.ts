@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
-import type { Frame, TraceEvent } from "@dsa-viz/trace-schema";
-import { buildRecursionTree, countCalls, findActiveCall } from "../recursionTree";
+import type { Frame, TraceEvent, Value } from "@dsa-viz/trace-schema";
+import {
+  buildRecursionTree,
+  countCalls,
+  findActiveCall,
+  formatArgs,
+  formatArgValue,
+} from "../recursionTree";
 
 const frame = (func: string, locals: Record<string, number> = {}, args: string[] = []): Frame => ({
   func,
@@ -132,6 +138,75 @@ describe("maxNodes cap", () => {
     // At the cap boundary the last real node has a +more sibling.
     const reachedSomeTruncated = JSON.stringify(root).includes('"truncated":true');
     expect(reachedSomeTruncated).toBe(true);
+  });
+});
+
+describe("formatArgValue", () => {
+  it("renders primitives as Python-style literals", () => {
+    expect(formatArgValue({ kind: "int", v: 42 })).toBe("42");
+    expect(formatArgValue({ kind: "float", v: 3.14 })).toBe("3.14");
+    expect(formatArgValue({ kind: "bool", v: true })).toBe("True");
+    expect(formatArgValue({ kind: "bool", v: false })).toBe("False");
+    expect(formatArgValue({ kind: "none" })).toBe("None");
+  });
+
+  it("shortens heap refs to the last 4 digits with an arrow", () => {
+    expect(formatArgValue({ kind: "ref", id: "h_4344566304" })).toBe("→6304");
+    // Even for short ids the arrow + last-up-to-4 holds.
+    expect(formatArgValue({ kind: "ref", id: "h_7" })).toBe("→7");
+  });
+
+  it("truncates long strings with an ellipsis", () => {
+    const short = formatArgValue({ kind: "str", v: "hi" });
+    expect(short).toBe('"hi"');
+    const long = formatArgValue({ kind: "str", v: "a very long string indeed" });
+    expect(long.length).toBeLessThanOrEqual(14);
+    expect(long.endsWith("…")).toBe(true);
+  });
+});
+
+describe("formatArgs", () => {
+  const ref = (id: string): Value => ({ kind: "ref", id });
+  const num = (v: number): Value => ({ kind: "int", v });
+
+  it("drops Python's implicit self so the distinguishing val survives", () => {
+    expect(formatArgs({ self: ref("h_4430016736"), val: num(1) })).toBe("val=1");
+  });
+
+  it("renders simple integer args verbatim", () => {
+    expect(formatArgs({ n: num(6) })).toBe("n=6");
+  });
+
+  it("shortens ref args to the last-4 form", () => {
+    expect(formatArgs({ head: ref("h_4344566304") })).toBe("head=→6304");
+  });
+
+  it("caps the joined label at 32 chars with a trailing ellipsis", () => {
+    const args: Record<string, Value> = {};
+    "abcdefghijklmnopqrstuvwxyz".split("").forEach((letter, i) => {
+      args[letter] = num(i);
+    });
+    const out = formatArgs(args);
+    expect(out.length).toBeLessThanOrEqual(32);
+    expect(out.endsWith("…")).toBe(true);
+  });
+
+  it("renders None and True without quoting", () => {
+    expect(formatArgs({ x: { kind: "none" }, y: { kind: "bool", v: true } })).toBe(
+      "x=None, y=True",
+    );
+  });
+
+  it("regression: four Node(N) calls produce visually distinct labels", () => {
+    // This is the exact bug the user spotted in the screenshot — before the
+    // fix all four __init__ nodes rendered as `self=h_xxxx, val=…` and
+    // looked identical. After the fix they must each show their unique val.
+    const sharedSelf = ref("h_4430016736");
+    const labels = [1, 2, 3, 4].map((n) =>
+      formatArgs({ self: sharedSelf, val: num(n) }),
+    );
+    expect(labels).toEqual(["val=1", "val=2", "val=3", "val=4"]);
+    expect(new Set(labels).size).toBe(4); // explicit uniqueness check
   });
 });
 

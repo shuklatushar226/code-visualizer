@@ -1,10 +1,12 @@
 import React, { useMemo } from "react";
 import { hierarchy, tree as d3tree } from "d3-hierarchy";
-import type { Trace, Value } from "@dsa-viz/trace-schema";
+import type { Trace } from "@dsa-viz/trace-schema";
 import {
   buildRecursionTree,
   countCalls,
   findActiveCall,
+  formatArgs,
+  formatArgsVerbose,
   type CallNode,
 } from "../lib/recursionTree";
 
@@ -15,7 +17,7 @@ export interface RecursionTreeViewProps {
   maxNodes?: number;
 }
 
-const NODE_W = 130;
+const NODE_W = 150;
 const NODE_H = 36;
 
 export const RecursionTreeView: React.FC<RecursionTreeViewProps> = ({
@@ -74,18 +76,23 @@ export const RecursionTreeView: React.FC<RecursionTreeViewProps> = ({
       ))}
       {nodes.map((node) => {
         const isActive = node.data.id === activeId;
+        const argsLabel = formatArgs(node.data.args);
+        const tooltip = `${node.data.func}(${formatArgsVerbose(node.data.args)})`;
         return (
           <g
             key={node.data.id}
             transform={`translate(${node.x}, ${node.y})`}
             className={`dsa-viz-recursion-node${isActive ? " is-active" : ""}`}
           >
+            {/* Native browser tooltip — hovering a node reveals the full
+                args including self= and full pointer ids. */}
+            <title>{tooltip}</title>
             <rect x={-NODE_W / 2} y={-NODE_H / 2} width={NODE_W} height={NODE_H} rx={6} />
             <text className="dsa-viz-recursion-func" textAnchor="middle" y={-2}>
               {node.data.func}
             </text>
             <text className="dsa-viz-recursion-args" textAnchor="middle" y={13}>
-              {formatArgs(node.data.args)}
+              {argsLabel}
             </text>
           </g>
         );
@@ -93,25 +100,3 @@ export const RecursionTreeView: React.FC<RecursionTreeViewProps> = ({
     </svg>
   );
 };
-
-function formatArgs(args: Record<string, Value>): string {
-  const parts = Object.entries(args).map(([k, v]) => `${k}=${formatValue(v)}`);
-  const joined = parts.join(", ");
-  return joined.length > 24 ? joined.slice(0, 23) + "…" : joined;
-}
-
-function formatValue(v: Value): string {
-  switch (v.kind) {
-    case "int":
-    case "float":
-      return String(v.v);
-    case "bool":
-      return v.v ? "True" : "False";
-    case "str":
-      return JSON.stringify(v.v);
-    case "none":
-      return "None";
-    case "ref":
-      return v.id;
-  }
-}

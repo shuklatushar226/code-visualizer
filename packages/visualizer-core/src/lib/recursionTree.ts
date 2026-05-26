@@ -121,6 +121,66 @@ export function findActiveCall(
   return descend(root);
 }
 
+/**
+ * Render one Value for display on a recursion-tree node label.
+ *
+ * - Heap refs collapse to `→<last-4-digits>` so the args line stays scannable
+ *   without burning 12+ chars per pointer. The reader can cross-reference the
+ *   last-4 tag with the Heap view when they care about identity.
+ * - Strings are JSON-escaped and capped at 14 visible chars.
+ * - All other primitives render as their Python-style literal.
+ */
+export function formatArgValue(v: Value): string {
+  switch (v.kind) {
+    case "int":
+    case "float":
+      return String(v.v);
+    case "bool":
+      return v.v ? "True" : "False";
+    case "str": {
+      const s = JSON.stringify(v.v);
+      return s.length > 14 ? s.slice(0, 13) + "…" : s;
+    }
+    case "none":
+      return "None";
+    case "ref": {
+      const tail = v.id.replace(/^h_/, "").slice(-4);
+      return `→${tail}`;
+    }
+  }
+}
+
+/**
+ * Build the args label that hangs under each recursion-tree node.
+ *
+ * - Drops Python's implicit `self`: it's always there for instance methods,
+ *   always a heap-ref, and never carries info. Including it ate so much of
+ *   the budget that the actually-distinguishing arg (`val=1` vs `val=2` etc.)
+ *   got chopped by truncation.
+ * - Caps the joined label at 32 chars with a trailing ellipsis. The component
+ *   pairs this with a `<title>` tooltip that always shows the full args.
+ */
+export function formatArgs(args: Record<string, Value>): string {
+  const parts: string[] = [];
+  for (const [k, v] of Object.entries(args)) {
+    if (k === "self") continue;
+    parts.push(`${k}=${formatArgValue(v)}`);
+  }
+  const joined = parts.join(", ");
+  const CAP = 32;
+  return joined.length > CAP ? joined.slice(0, CAP - 1) + "…" : joined;
+}
+
+/** Verbose args label used by the SVG `<title>` tooltip — no truncation,
+ *  includes `self` so power users can correlate the full picture. */
+export function formatArgsVerbose(args: Record<string, Value>): string {
+  const parts: string[] = [];
+  for (const [k, v] of Object.entries(args)) {
+    parts.push(`${k}=${formatArgValue(v)}`);
+  }
+  return parts.join(", ");
+}
+
 export function countCalls(root: CallNode): number {
   let n = 0;
   function walk(node: CallNode): void {

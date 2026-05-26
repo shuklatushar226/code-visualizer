@@ -12,8 +12,8 @@
   ],
   "scripts": {
     "build": "npm run build --workspaces --if-present",
-    "dev:web": "npm run dev --workspace=web-app",
-    "dev:ext": "npm run dev --workspace=browser-extension",
+    "dev:web": "npm run dev --workspace=@dsa-viz/web-app",
+    "dev:ext": "npm run dev --workspace=@dsa-viz/browser-extension",
     "test": "npm run test:py && npm run test:js",
     "test:py": "python -m pytest packages/backend packages/tracer-python packages/tracer-cpp",
     "test:js": "npm run test --workspace=@dsa-viz/trace-schema --workspace=@dsa-viz/visualizer-core",
