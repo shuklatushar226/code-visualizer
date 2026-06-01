@@ -5,7 +5,7 @@ A trace is a JSON document with this shape:
 ```jsonc
 {
   "version": "0.1",
-  "language": "python" | "cpp",
+  "language": "python" | "cpp" | "javascript" | "java",
   "source": "<the original source code as a string>",
   "stdin":  "<the input fed to the program, if any>",
   "stdout": "<everything the program printed>",

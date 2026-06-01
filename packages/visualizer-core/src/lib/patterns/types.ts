@@ -18,5 +18,7 @@ export function topFrame(ev: TraceEvent): Frame | undefined {
 }
 
 export function intValue(v: Value | undefined): number | null {
-  return v?.kind === "int" ? v.v : null;
+  // `v.v` may be a string for ints beyond 2**53; pattern indices are always
+  // small array positions, so coercing to a number here is safe.
+  return v?.kind === "int" ? Number(v.v) : null;
 }

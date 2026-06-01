@@ -1,0 +1,25 @@
+# Render Blueprint — one Docker web service that serves both the API and the SPA.
+# Render → New → Blueprint → pick this repo; it reads this file and provisions the
+# service. Pushes to the connected branch auto-deploy.
+services:
+  - type: web
+    name: code-visualizer
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /healthz
+    autoDeploy: true
+    envVars:
+      # Per-trace sandbox limits (the backend runs untrusted user code).
+      - key: SANDBOX_TIMEOUT_SECONDS
+        value: "5"
+      - key: MAX_TRACE_EVENTS
+        value: "5000"
+      # The SPA is same-origin, so it needs no CORS grant. "*" is kept so the
+      # browser/VS Code extensions can also reach this backend if pointed at it.
+      - key: ALLOWED_ORIGINS
+        value: "*"
+      # AI /explain stays disabled (returns 501) until a key is added as a secret
+      # in the Render dashboard:
+      #   - key: DSA_VIZ_AI_PROVIDER  value: anthropic
+      #   - key: DSA_VIZ_AI_KEY       sync: false   # set in dashboard

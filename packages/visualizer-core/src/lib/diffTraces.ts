@@ -31,12 +31,15 @@ export function diffTraces(a: Trace, b: Trace): TraceDiff {
     }
   }
   if (a.events.length !== b.events.length) {
+    // Only the LONGER trace has an event at index `len`; for the shorter trace
+    // `len` is one past its last event. Clamp each index to its own bounds so
+    // each side's player seeks to a valid event (the shorter one to its last).
     return {
       diverged: true,
       commonPrefix: len,
       divergence: {
-        aIndex: len,
-        bIndex: len,
+        aIndex: Math.min(len, a.events.length - 1),
+        bIndex: Math.min(len, b.events.length - 1),
         reason: `trace lengths differ (${a.events.length} vs ${b.events.length})`,
       },
     };

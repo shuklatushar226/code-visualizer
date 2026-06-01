@@ -44,6 +44,11 @@ packages/vscode-extension/*.vsix
 .remember/
 pytest-cache-files-*/
 dsa-viz-*.png
+# Loose dev screenshots (before/after bug-fix captures)
+bug*.png
+fix*.png
+java-*.png
+npm-debug.log
 
 # Playwright test outputs
 test-results/

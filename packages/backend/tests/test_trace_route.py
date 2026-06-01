@@ -61,10 +61,30 @@ def test_trace_oversized_source_rejected_by_pydantic():
     assert r.status_code == 422
 
 
-def test_trace_java_returns_501_with_skeleton_message():
-    r = client.post("/trace", json={"language": "java", "source": "class A {}", "stdin": ""})
-    assert r.status_code == 501
-    assert "stretch" in r.json()["detail"].lower()
+def test_trace_java_returns_501_or_traces():
+    """Mirror of the cpp/js tests: with a JDK (javac + java) on PATH the Java
+    tracer dispatches and returns a real trace; otherwise the route returns 501
+    with an instructive message."""
+    import shutil
+
+    src = (
+        "public class Main {\n"
+        "  public static void main(String[] a){\n"
+        "    int x = 1;\n"
+        "    int y = x + 1;\n"
+        "    System.out.println(y);\n"
+        "  }\n"
+        "}\n"
+    )
+    r = client.post("/trace", json={"language": "java", "source": src, "stdin": ""})
+    if shutil.which("javac") and shutil.which("java"):
+        assert r.status_code == 200
+        body = r.json()
+        assert body["language"] == "java"
+        assert body["exit"]["status"] in {"ok", "error"}
+    else:
+        assert r.status_code == 501
+        assert "jdk" in r.json()["detail"].lower() or "javac" in r.json()["detail"].lower()
 
 
 def test_trace_javascript_returns_501_or_traces():

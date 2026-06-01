@@ -1,0 +1,21 @@
+# Keep the build context small and reproducible.
+**/node_modules
+**/dist
+**/build
+**/__pycache__
+**/*.egg-info
+**/.pytest_cache
+.venv
+venv
+.git
+.github
+.playwright-mcp
+.remember
+test-results
+playwright-report
+*.png
+*.log
+packages/browser-extension/web-ext-artifacts
+packages/vscode-extension/media
+packages/vscode-extension/out
+packages/vscode-extension/*.vsix

@@ -3,7 +3,7 @@
 The `/explain` route asks an LLM to produce a one-sentence explanation
 of the line currently executing. This module wraps that call behind an
 ABC so the route is provider-agnostic — flipping `DSA_VIZ_AI_PROVIDER`
-between "anthropic", "openai", or "fixture" swaps the implementation
+between "anthropic" or "fixture" swaps the implementation
 without route changes.
 
 The `fixture` provider returns a canned string and is used by tests
@@ -126,4 +126,6 @@ def make_provider(provider: Optional[str] = None) -> AIProvider:
         return FixtureProvider()
     if name == "anthropic":
         return AnthropicProvider()
-    raise AIProviderError(f"unknown AI provider: {name!r}")
+    raise AIProviderError(
+        f"unknown AI provider: {name!r} (supported: 'anthropic', 'fixture')"
+    )

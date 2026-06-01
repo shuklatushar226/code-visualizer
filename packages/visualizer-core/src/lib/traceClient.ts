@@ -1,8 +1,10 @@
-import type { Trace } from "@dsa-viz/trace-schema";
+import type { Language, Trace } from "@dsa-viz/trace-schema";
 
 export interface TraceRequest {
   source: string;
-  language: "python" | "cpp";
+  // Reuse the shared Language type so the request contract can't drift from
+  // the languages the backend actually supports (python | cpp | javascript).
+  language: Language;
   stdin?: string;
 }
 

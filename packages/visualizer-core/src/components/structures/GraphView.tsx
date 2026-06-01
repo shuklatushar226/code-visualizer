@@ -1,5 +1,6 @@
 import React from "react";
 import type { HeapObject, Value } from "@dsa-viz/trace-schema";
+import { formatScalar } from "../../lib/formatScalar";
 
 export interface GraphViewProps {
   rootId: string;
@@ -88,12 +89,14 @@ function buildAdjacencyGraph(
   const key = (v: Value): string => {
     if (v.kind === "ref") return `r:${v.id}`;
     if (v.kind === "none") return "n:None";
-    return `p:${(v as { v: unknown }).v}`;
+    // Include the kind so distinct vertices that stringify the same (int 1 vs
+    // str "1", float 1.0 vs int 1) stay separate nodes instead of merging.
+    return `p:${v.kind}:${(v as { v: unknown }).v}`;
   };
   const label = (v: Value): string => {
     if (v.kind === "ref") return v.id;
     if (v.kind === "none") return "None";
-    return String((v as { v: unknown }).v);
+    return formatScalar(v);
   };
 
   for (const [k, neighbors] of root.entries) {

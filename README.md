@@ -102,7 +102,7 @@ code-visualizer/
 ```bash
 # Backend (FastAPI on :8000)
 python3 -m venv .venv && source .venv/bin/activate
-pip install -e packages/tracer-python -e packages/tracer-cpp -e 'packages/backend[dev]'
+pip install -e packages/tracer-python -e packages/tracer-cpp -e packages/tracer-java -e 'packages/backend[dev]'
 uvicorn server.main:app --port 8000 --app-dir packages/backend/src &
 
 # Web app (Vite on :5173)
@@ -155,8 +155,12 @@ node unit + e2e + extension bundles) on every push.
   reports the first divergence
 * AI explainer — `POST /explain` route stub; wire `DSA_VIZ_AI_KEY` and a
   provider to enable
-* Java / JS tracers — package skeletons in `packages/tracer-java`,
-  `packages/tracer-js`; route returns 501
+* Java tracer ✅ — `packages/tracer-java` drives the user's program through a
+  JDI helper (`helper/dsaviz/Tracer.java`): line-by-line stepping, call stack,
+  recursion, exceptions, arrays, user objects (ListNode/TreeNode → linked
+  list/tree), and `java.util` collections (Map/Set/Collection). Needs a JDK
+  17+ on PATH; the route returns 501 otherwise.
+* JS tracer — V8 Inspector driver in `packages/tracer-js`; needs `node` on PATH
 
 **Sandbox hardening**: `docs/SANDBOX.md` documents the production
 docker invocation; `packages/backend/Dockerfile.sandbox` and

@@ -1,6 +1,7 @@
 import React from "react";
 import type { HeapObject, Value } from "@dsa-viz/trace-schema";
 import type { PatternKind } from "../../lib/patterns";
+import { formatScalar } from "../../lib/formatScalar";
 
 export interface ArrayOverlay {
   /** Inclusive lower index. */
@@ -92,7 +93,7 @@ function renderValue(v: Value): string {
   switch (v.kind) {
     case "int":
     case "float":
-      return String(v.v);
+      return formatScalar(v);
     case "bool":
       return v.v ? "T" : "F";
     case "str":

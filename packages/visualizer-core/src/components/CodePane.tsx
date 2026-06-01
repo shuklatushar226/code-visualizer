@@ -1,8 +1,9 @@
 import React, { useMemo } from "react";
+import type { Language } from "@dsa-viz/trace-schema";
 
 export interface CodePaneProps {
   source: string;
-  language: "python" | "cpp";
+  language: Language;
   currentLine?: number;
 }
 

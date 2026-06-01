@@ -1,5 +1,6 @@
 import React from "react";
 import type { HeapObject, Value } from "@dsa-viz/trace-schema";
+import { formatScalar } from "../../lib/formatScalar";
 
 export interface HeapTreeViewProps {
   rootId: string;
@@ -68,7 +69,7 @@ export const HeapTreeView: React.FC<HeapTreeViewProps> = ({
 
 function labelValue(v: Value): string {
   if (v.kind === "int" || v.kind === "float" || v.kind === "str" || v.kind === "bool")
-    return String((v as { v: unknown }).v);
+    return formatScalar(v);
   if (v.kind === "none") return "·";
   return "→";
 }

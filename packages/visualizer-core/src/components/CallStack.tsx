@@ -1,5 +1,6 @@
 import React from "react";
 import type { Frame, Value } from "@dsa-viz/trace-schema";
+import { formatScalar } from "../lib/formatScalar";
 
 export interface CallStackProps {
   frames: Frame[];
@@ -50,7 +51,9 @@ const ValueChip: React.FC<{ value: Value }> = ({ value }) => {
   switch (value.kind) {
     case "int":
     case "float":
-      return <span className="dsa-viz-chip is-num">{String(value.v)}</span>;
+      // Big ints arrive as exact decimal strings; non-finite floats carry an
+      // inf/-inf/nan sentinel — formatScalar renders both correctly.
+      return <span className="dsa-viz-chip is-num">{formatScalar(value)}</span>;
     case "bool":
       return <span className="dsa-viz-chip is-bool">{value.v ? "true" : "false"}</span>;
     case "str":

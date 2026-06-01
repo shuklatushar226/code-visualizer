@@ -3,14 +3,14 @@
  */
 
 import { useEffect, useState } from "react";
-import type { Trace } from "@dsa-viz/trace-schema";
+import type { Language, Trace } from "@dsa-viz/trace-schema";
 import { traceClient } from "../lib/traceClient";
 
 export interface UseTraceResult {
   trace: Trace | null;
   loading: boolean;
   error: string | null;
-  retrace: (source: string, language: "python" | "cpp", stdin?: string) => void;
+  retrace: (source: string, language: Language, stdin?: string) => void;
 }
 
 export function useTrace(baseUrl = "http://localhost:8000"): UseTraceResult {
@@ -20,7 +20,7 @@ export function useTrace(baseUrl = "http://localhost:8000"): UseTraceResult {
 
   const retrace = (
     source: string,
-    language: "python" | "cpp",
+    language: Language,
     stdin = ""
   ) => {
     setLoading(true);

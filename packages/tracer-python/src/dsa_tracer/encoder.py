@@ -10,9 +10,15 @@ Anything not recognised is rendered as { "kind": "str", "v": repr(x) }.
 
 from __future__ import annotations
 
+import math
 from typing import Any, Dict, List, Tuple
 
 MAX_STR_LEN = 1024
+
+# JS parses JSON numbers as IEEE-754 doubles, so integers with magnitude beyond
+# 2**53 - 1 lose precision on the frontend. Larger ints are emitted as exact
+# decimal strings (with a ``big`` flag) so the value round-trips losslessly.
+MAX_SAFE_INT = 2 ** 53 - 1
 
 
 class HeapEncoder:
@@ -40,8 +46,19 @@ class HeapEncoder:
         if isinstance(value, bool):
             return {"kind": "bool", "v": bool(value)}
         if isinstance(value, int):
+            # Beyond the JS safe-integer range, emit an exact decimal string so
+            # the browser doesn't round it when parsing the JSON.
+            if abs(value) > MAX_SAFE_INT:
+                return {"kind": "int", "v": str(value), "big": True}
             return {"kind": "int", "v": int(value)}
         if isinstance(value, float):
+            # inf / -inf / nan are not valid strict JSON; FastAPI serializes
+            # responses with allow_nan=False and would raise. Encode them as a
+            # JSON-safe sentinel that the frontend renders explicitly.
+            if math.isnan(value):
+                return {"kind": "float", "v": None, "special": "nan"}
+            if math.isinf(value):
+                return {"kind": "float", "v": None, "special": "inf" if value > 0 else "-inf"}
             return {"kind": "float", "v": float(value)}
         if isinstance(value, str):
             return {"kind": "str", "v": _truncate(value)}

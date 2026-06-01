@@ -58,6 +58,49 @@ describe("detectStructure", () => {
     });
   });
 
+  it("classifies a grouping dict (key -> list of unrelated values) as a dict, not a graph", () => {
+    // group-anagrams shape: keys are sorted-letter strings, values are word
+    // lists whose items are NOT themselves keys — so it is not an adjacency list.
+    const heap: Record<string, HeapObject> = {
+      h_root: {
+        kind: "dict",
+        entries: [
+          [{ kind: "str", v: "aet" }, ref("h_1")],
+          [{ kind: "str", v: "ant" }, ref("h_2")],
+        ],
+      },
+      h_1: { kind: "list", items: [{ kind: "str", v: "eat" }, { kind: "str", v: "tea" }] },
+      h_2: { kind: "list", items: [{ kind: "str", v: "nat" }] },
+    };
+    expect(detectStructure(ref("h_root"), heap)).toEqual({ kind: "dict", rootId: "h_root" });
+  });
+
+  it("classifies a Node with both `next` and left/right (LeetCode 116) as a tree", () => {
+    const node = (val: number, left: Value, right: Value): HeapObject => ({
+      kind: "object",
+      type: "Node",
+      fields: { val: { kind: "int", v: val }, left, right, next: { kind: "none" } },
+    });
+    const heap: Record<string, HeapObject> = {
+      h_1: node(1, ref("h_2"), ref("h_3")),
+      h_2: node(2, { kind: "none" }, { kind: "none" }),
+      h_3: node(3, { kind: "none" }, { kind: "none" }),
+    };
+    expect(detectStructure(ref("h_1"), heap)).toEqual({ kind: "tree", rootId: "h_1" });
+  });
+
+  it("still classifies a plain ListNode (next, no left/right) as a linked list", () => {
+    const heap: Record<string, HeapObject> = {
+      h_1: {
+        kind: "object",
+        type: "ListNode",
+        fields: { val: { kind: "int", v: 1 }, next: ref("h_2") },
+      },
+      h_2: { kind: "object", type: "ListNode", fields: { val: { kind: "int", v: 2 }, next: { kind: "none" } } },
+    };
+    expect(detectStructure(ref("h_1"), heap)).toEqual({ kind: "linked_list", rootId: "h_1" });
+  });
+
   it("classifies a plain dict (non-adjacency) as dict", () => {
     const heap: Record<string, HeapObject> = {
       h_1: {

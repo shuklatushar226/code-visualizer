@@ -59,12 +59,19 @@ export function detectStructure(
     const cls = obj.type.toLowerCase();
     const fields = Object.keys(obj.fields);
 
-    // explicit naming wins
-    if (/listnode|node/.test(cls) && fields.includes("next")) {
-      return { kind: "linked_list", rootId: value.id };
-    }
+    // Explicit naming/shape wins. The tree shape is checked FIRST so a node
+    // that has left/right children is never swallowed by the loose `node`
+    // substring linked-list heuristic — e.g. LeetCode 116 `Node {val, left,
+    // right, next}` must render as a tree, not a single-box linked list.
     if (/treenode/.test(cls) || (fields.includes("left") && fields.includes("right"))) {
       return { kind: "tree", rootId: value.id };
+    }
+    if (
+      /listnode|node/.test(cls) &&
+      fields.includes("next") &&
+      !(fields.includes("left") && fields.includes("right"))
+    ) {
+      return { kind: "linked_list", rootId: value.id };
     }
 
     // single self-pointer => linked list
@@ -85,16 +92,36 @@ export function detectStructure(
   return { kind: "scalar" };
 }
 
+/** Stable identity for a Value, used to compare dict keys against neighbours.
+ *  Includes `kind` so that e.g. int 1 and str "1" are treated as distinct. */
+function valueId(v: Value): string {
+  if (v.kind === "ref") return `r:${v.id}`;
+  if (v.kind === "none") return "none";
+  return `p:${v.kind}:${(v as { v: unknown }).v}`;
+}
+
 function looksLikeAdjacency(
   obj: HeapObject & { kind: "dict" },
   heap: Record<string, HeapObject>,
 ): boolean {
   if (obj.entries.length === 0) return false;
+  const keyIds = new Set(obj.entries.map(([k]) => valueId(k)));
+  let totalItems = 0;
+  let itemsThatAreKeys = 0;
   for (const [, v] of obj.entries) {
     if (v.kind !== "ref") return false;
     const inner = heap[v.id];
     if (!inner) return false;
     if (inner.kind !== "list" && inner.kind !== "set") return false;
+    for (const item of inner.items) {
+      totalItems++;
+      if (keyIds.has(valueId(item))) itemsThatAreKeys++;
+    }
   }
-  return true;
+  // A real adjacency list points back at its own vertices, so the neighbours
+  // are predominantly keys. A grouping/bucketing dict (key -> list of unrelated
+  // values, e.g. group-anagrams or defaultdict(list)) has ~no items that are
+  // keys, and must render as a dict rather than a node-edge graph.
+  if (totalItems === 0) return false;
+  return itemsThatAreKeys / totalItems >= 0.5;
 }

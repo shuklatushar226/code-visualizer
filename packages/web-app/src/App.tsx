@@ -58,6 +58,37 @@ int main() {
 }
 `;
 
+const DEFAULT_JAVA = `// DSA Visualizer demo (Java): reverse a singly linked list.
+public class Main {
+    static class ListNode {
+        int val;
+        ListNode next;
+        ListNode(int val) { this.val = val; }
+    }
+
+    static ListNode reverse(ListNode head) {
+        ListNode prev = null;
+        ListNode cur = head;
+        while (cur != null) {
+            ListNode nxt = cur.next;
+            cur.next = prev;
+            prev = cur;
+            cur = nxt;
+        }
+        return prev;
+    }
+
+    public static void main(String[] args) {
+        // Build 1 -> 2 -> 3 -> 4 and reverse it.
+        ListNode head = new ListNode(1);
+        head.next = new ListNode(2);
+        head.next.next = new ListNode(3);
+        head.next.next.next = new ListNode(4);
+        ListNode result = reverse(head);
+    }
+}
+`;
+
 // Two near-identical programs that diverge at one local value, used as the
 // initial state of Compare mode so the divergence visibly highlights.
 const DIFF_LEFT = `def solve(n):
@@ -77,7 +108,7 @@ const DIFF_RIGHT = `def solve(n):
 solve(5)
 `;
 
-type Lang = "python" | "cpp" | "javascript";
+type Lang = "python" | "cpp" | "javascript" | "java";
 type Mode = "single" | "compare";
 
 export const App: React.FC = () => {
@@ -87,7 +118,15 @@ export const App: React.FC = () => {
   const [sourceB, setSourceB] = useState<string>(DIFF_RIGHT);
   const [stdin, setStdin] = useState<string>("");
   const [backend, setBackend] = useState<string>(
-    () => localStorage.getItem("dsaViz.backend") ?? "http://localhost:8000",
+    () =>
+      // 1. explicit user override (Settings field) wins;
+      // 2. then a build-time VITE_API_URL (split-deploy: point at a remote backend);
+      // 3. in dev, fall back to the local backend;
+      // 4. in a production build with no override, use same-origin ("" → "/trace"),
+      //    which is exactly the combined-service deploy where FastAPI serves this SPA.
+      localStorage.getItem("dsaViz.backend") ??
+      (import.meta.env.VITE_API_URL as string | undefined) ??
+      (import.meta.env.DEV ? "http://localhost:8000" : ""),
   );
   const [trace, setTrace] = useState<Trace | null>(null);
   const [traceB, setTraceB] = useState<Trace | null>(null);
@@ -125,11 +164,13 @@ export const App: React.FC = () => {
     const isAnyDefault =
       source.trim() === DEFAULT_PYTHON.trim() ||
       source.trim() === DEFAULT_CPP.trim() ||
-      source.trim() === DEFAULT_JAVASCRIPT.trim();
+      source.trim() === DEFAULT_JAVASCRIPT.trim() ||
+      source.trim() === DEFAULT_JAVA.trim();
     if (!isAnyDefault) return;
     if (next === "python") setSource(DEFAULT_PYTHON);
     else if (next === "cpp") setSource(DEFAULT_CPP);
     else if (next === "javascript") setSource(DEFAULT_JAVASCRIPT);
+    else if (next === "java") setSource(DEFAULT_JAVA);
   }
 
   function onBackendChange(next: string) {
@@ -147,7 +188,10 @@ export const App: React.FC = () => {
     setShareUrl(null);
     if (next === "compare") {
       // Seed Compare with two near-identical programs so the divergence is
-      // visible immediately.
+      // visible immediately. They are Python, so reset the language too —
+      // otherwise a JS/C++ selection from Single mode would trace this Python
+      // source through the wrong pipeline and the comparison would be empty.
+      setLanguage("python");
       setSource(DIFF_LEFT);
       setSourceB(DIFF_RIGHT);
       setTrace(null);
@@ -277,6 +321,7 @@ export const App: React.FC = () => {
                   <option value="python">Python</option>
                   <option value="cpp">C++</option>
                   <option value="javascript">JavaScript</option>
+                  <option value="java">Java</option>
                 </select>
               </label>
               <label className="stdin">
@@ -361,6 +406,7 @@ export const App: React.FC = () => {
                   <option value="python">Python</option>
                   <option value="cpp">C++</option>
                   <option value="javascript">JavaScript</option>
+                  <option value="java">Java</option>
                 </select>
               </label>
               <button onClick={compare} disabled={busy}>

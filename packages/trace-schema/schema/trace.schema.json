@@ -6,7 +6,7 @@
   "required": ["version", "language", "source", "events"],
   "properties": {
     "version": { "const": "0.1" },
-    "language": { "enum": ["python", "cpp"] },
+    "language": { "enum": ["python", "cpp", "javascript", "java"] },
     "source": { "type": "string" },
     "stdin": { "type": "string" },
     "stdout": { "type": "string" },
@@ -65,8 +65,8 @@
     },
     "Value": {
       "oneOf": [
-        { "type": "object", "properties": { "kind": { "const": "int" }, "v": { "type": "integer" } }, "required": ["kind", "v"] },
-        { "type": "object", "properties": { "kind": { "const": "float" }, "v": { "type": "number" } }, "required": ["kind", "v"] },
+        { "type": "object", "properties": { "kind": { "const": "int" }, "v": { "type": ["integer", "string"] }, "big": { "type": "boolean" } }, "required": ["kind", "v"] },
+        { "type": "object", "properties": { "kind": { "const": "float" }, "v": { "type": ["number", "null"] }, "special": { "enum": ["inf", "-inf", "nan"] } }, "required": ["kind", "v"] },
         { "type": "object", "properties": { "kind": { "const": "bool" }, "v": { "type": "boolean" } }, "required": ["kind", "v"] },
         { "type": "object", "properties": { "kind": { "const": "str" }, "v": { "type": "string" } }, "required": ["kind", "v"] },
         { "type": "object", "properties": { "kind": { "const": "none" } }, "required": ["kind"] },

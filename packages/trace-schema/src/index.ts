@@ -6,7 +6,7 @@
  * from the other.)
  */
 
-export type Language = "python" | "cpp";
+export type Language = "python" | "cpp" | "javascript" | "java";
 
 export interface Trace {
   version: "0.1";
@@ -61,8 +61,12 @@ export interface Frame {
 // ---------------- Values & heap ---------------- //
 
 export type Value =
-  | { kind: "int"; v: number }
-  | { kind: "float"; v: number }
+  // `v` is a string (with `big: true`) when the integer exceeds JS's safe
+  // range (2**53), so the exact value survives JSON round-tripping.
+  | { kind: "int"; v: number | string; big?: boolean }
+  // Non-finite floats can't be expressed in strict JSON, so `v` is null and
+  // `special` carries the sentinel.
+  | { kind: "float"; v: number | null; special?: "inf" | "-inf" | "nan" }
   | { kind: "bool"; v: boolean }
   | { kind: "str"; v: string }
   | { kind: "none" }

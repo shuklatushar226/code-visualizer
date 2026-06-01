@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import secrets
 from typing import Any, Dict
 
 from fastapi import APIRouter, HTTPException
@@ -30,11 +29,19 @@ class SavePayload(BaseModel):
 
 
 def _make_code(trace: Dict[str, Any]) -> str:
-    digest = hashlib.sha256(json.dumps(trace, sort_keys=True).encode()).hexdigest()[:8]
-    # Salt with a random byte if there's already a collision so two
-    # different traces can't clobber each other.
+    base = hashlib.sha256(json.dumps(trace, sort_keys=True).encode()).hexdigest()[:8]
+    digest = base
+    suffix = 0
+    # Resolve collisions. A previous version re-sliced `(digest + token)[:8]`,
+    # which is a no-op once `digest` is already 8 chars — so a repeat or any
+    # 8-hex-prefix collision looped forever. Re-hash with an incrementing
+    # suffix so each attempt yields a genuinely different 8-char code, and
+    # reuse the existing code when the *identical* trace is saved again.
     while digest in _STORE:
-        digest = (digest + secrets.token_hex(1))[:8]
+        if _STORE[digest] == trace:
+            return digest
+        suffix += 1
+        digest = hashlib.sha256(f"{base}:{suffix}".encode()).hexdigest()[:8]
     return digest
 
 

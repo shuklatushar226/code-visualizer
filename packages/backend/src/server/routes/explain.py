@@ -111,7 +111,13 @@ _CACHE: "OrderedDict[str, str]" = OrderedDict()
 
 def _cache_key(req: ExplainRequest) -> str:
     h = hashlib.sha256(req.source.encode("utf-8")).hexdigest()[:16]
-    return f"{h}:{req.language}:{req.event.line}"
+    # The prompt embeds the live local values (build_user_prompt), so a line
+    # executed at different loop iterations / recursion frames produces a
+    # different explanation. Key on the exact rendered state too, otherwise the
+    # first iteration's answer is wrongly served for every later one.
+    state = _summarize_locals(req.event.locals)
+    sh = hashlib.sha256(f"{req.event.func}|{state}".encode("utf-8")).hexdigest()[:16]
+    return f"{h}:{req.language}:{req.event.line}:{sh}"
 
 
 def _cache_get(key: str) -> Optional[str]:
@@ -133,6 +139,23 @@ _RATE_PER_MIN = int(os.environ.get("EXPLAIN_RATE_PER_MIN", "30"))
 _BUCKET_CAP = _RATE_PER_MIN
 _REFILL_INTERVAL = 60.0 / max(_RATE_PER_MIN, 1)
 _BUCKETS: Dict[str, tuple] = {}
+# Cap the per-IP bucket map so a stream of distinct client IPs can't grow it
+# without bound. When exceeded, drop buckets that have fully refilled (i.e. are
+# indistinguishable from a brand-new IP), so eviction never costs anyone state.
+_BUCKETS_MAX = 10_000
+
+
+def _prune_buckets() -> None:
+    if len(_BUCKETS) <= _BUCKETS_MAX:
+        return
+    now = time.monotonic()
+    stale = [
+        ip
+        for ip, (tokens, last) in _BUCKETS.items()
+        if min(_BUCKET_CAP, tokens + (now - last) / _REFILL_INTERVAL) >= _BUCKET_CAP
+    ]
+    for ip in stale:
+        _BUCKETS.pop(ip, None)
 
 
 def _allow(ip: str) -> bool:
@@ -143,6 +166,7 @@ def _allow(ip: str) -> bool:
     tokens = min(_BUCKET_CAP, tokens + elapsed / _REFILL_INTERVAL)
     if tokens >= 1:
         _BUCKETS[ip] = (tokens - 1, now)
+        _prune_buckets()
         return True
     _BUCKETS[ip] = (tokens, now)
     return False

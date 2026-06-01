@@ -69,4 +69,20 @@ describe("diffTraces", () => {
     expect(d.diverged).toBe(true);
     expect(d.divergence?.reason).toContain("lengths differ");
   });
+
+  it("clamps the divergence index to each trace's own bounds on a length mismatch", () => {
+    const a = trace([
+      ev("step", 1, { x: v(1) }),
+      ev("step", 2, { x: v(1) }),
+      ev("step", 3, { x: v(1) }),
+    ]);
+    const b = trace([ev("step", 1, { x: v(1) })]); // strict prefix, length 1
+    const d = diffTraces(a, b);
+    expect(d.diverged).toBe(true);
+    // A's index points at its first event beyond the common prefix...
+    expect(d.divergence?.aIndex).toBe(1);
+    // ...while B's index must stay a valid index into B (max 0), not `len`.
+    expect(d.divergence?.bIndex).toBe(b.events.length - 1);
+    expect(d.divergence?.bIndex).toBeLessThan(b.events.length);
+  });
 });

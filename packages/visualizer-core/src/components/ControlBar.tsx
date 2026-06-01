@@ -5,6 +5,12 @@ export interface ControlBarProps extends PlaybackState {
   stdout?: string;
 }
 
+// usePlayback's `speed` is milliseconds-per-step. The dropdown offers playback
+// MULTIPLIERS, so convert: 1× == BASE_MS, 2× is twice as fast (half the ms),
+// 0.5× is half as fast. BASE_MS matches usePlayback's default so the initial
+// selection reads "1×".
+const BASE_MS = 400;
+
 export const ControlBar: React.FC<ControlBarProps> = ({
   t,
   total,
@@ -45,8 +51,8 @@ export const ControlBar: React.FC<ControlBarProps> = ({
         <label>
           speed
           <select
-            value={String(speed)}
-            onChange={(e) => setSpeed(Number(e.target.value))}
+            value={String(BASE_MS / speed)}
+            onChange={(e) => setSpeed(BASE_MS / Number(e.target.value))}
           >
             <option value="0.5">0.5×</option>
             <option value="1">1×</option>

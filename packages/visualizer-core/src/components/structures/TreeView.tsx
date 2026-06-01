@@ -1,6 +1,7 @@
 import React, { useMemo } from "react";
 import { hierarchy, tree as d3tree, type HierarchyPointNode } from "d3-hierarchy";
 import type { HeapObject, Value } from "@dsa-viz/trace-schema";
+import { formatScalar } from "../../lib/formatScalar";
 
 export interface TreeViewProps {
   rootId: string;
@@ -36,12 +37,17 @@ export const TreeView: React.FC<TreeViewProps> = ({
     heap,
     childFields,
   ]);
-  if (!root) return <em>(not tree-like)</em>;
-
+  // Both hooks must run on every render: if `layout` lived after the early
+  // return below, scrubbing to a step where buildTree flips between null and a
+  // real node would change the hook count and crash the whole visualizer with
+  // React's "Rendered more hooks than during the previous render".
   const layout = useMemo(() => {
+    if (!root) return null;
     const h = hierarchy<TreeNode>(root, (d) => d.children);
     return d3tree<TreeNode>().size([width - 40, height - 40])(h);
   }, [root, width, height]);
+
+  if (!root || !layout) return <em>(not tree-like)</em>;
 
   const nodes = layout.descendants();
   const links = layout.links();
@@ -115,7 +121,7 @@ function buildTree(
 
 function labelValue(v: Value): string {
   if (v.kind === "int" || v.kind === "float" || v.kind === "str" || v.kind === "bool")
-    return String((v as { v: unknown }).v);
+    return formatScalar(v);
   if (v.kind === "none") return "·";
   return "→";
 }

@@ -82,6 +82,60 @@ describe("trace.schema.json", () => {
     expect(validate(trace)).toBe(true);
   });
 
+  it("validates a javascript trace (the JS tracer emits language: 'javascript')", () => {
+    const js = { ...validTrace, language: "javascript" as const };
+    expect(validate(js)).toBe(true);
+  });
+
+  it("validates a java trace (the Java tracer emits language: 'java')", () => {
+    const java = { ...validTrace, language: "java" as const };
+    expect(validate(java)).toBe(true);
+  });
+
+  it("validates a big integer encoded as an exact decimal string", () => {
+    const trace: any = {
+      ...validTrace,
+      events: [
+        {
+          ...validTrace.events[0],
+          stack: [
+            {
+              func: "<module>",
+              file: "main.py",
+              line: 1,
+              locals: { x: { kind: "int", v: "1180591620717411303424", big: true } },
+              args: [],
+            },
+          ],
+        },
+      ],
+    };
+    if (!validate(trace)) console.error(validate.errors);
+    expect(validate(trace)).toBe(true);
+  });
+
+  it("validates non-finite floats encoded as a sentinel (inf/-inf/nan)", () => {
+    const trace: any = {
+      ...validTrace,
+      events: [
+        {
+          ...validTrace.events[0],
+          stack: [
+            {
+              func: "<module>",
+              file: "main.py",
+              line: 1,
+              locals: { d: { kind: "float", v: null, special: "inf" } },
+              args: [],
+            },
+          ],
+        },
+      ],
+    };
+    if (!validate(trace)) console.error(validate.errors);
+    expect(validate(trace)).toBe(true);
+  });
+
   it("rejects a trace missing version", () => {
     const bad = { ...validTrace } as unknown as Record<string, unknown>;
     delete bad.version;

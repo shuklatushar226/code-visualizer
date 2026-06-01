@@ -15,6 +15,7 @@ dependencies = [
     "dsa-tracer",
     "dsa-tracer-cpp",
     "dsa-tracer-js",
+    "dsa-tracer-java",
 ]
 
 [project.optional-dependencies]

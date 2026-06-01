@@ -131,9 +131,10 @@ function computeOverlay(hit: PatternHit | null, frame: Frame | undefined): Patte
     return {
       kind: hit.kind,
       arrayLocalName: hit.arrayLocalName,
-      lo: lo.v,
-      hi: hi.v,
-      midIndex: mid.v,
+      // Array indices are always small ints; coerce in case `v` is a big-int string.
+      lo: Number(lo.v),
+      hi: Number(hi.v),
+      midIndex: Number(mid.v),
     };
   }
   if (hit.kind === "dp") {
@@ -153,7 +154,7 @@ function computeOverlay(hit: PatternHit | null, frame: Frame | undefined): Patte
   return {
     kind: hit.kind,
     arrayLocalName: hit.arrayLocalName,
-    lo: Math.min(a.v, b.v),
-    hi: Math.max(a.v, b.v),
+    lo: Math.min(Number(a.v), Number(b.v)),
+    hi: Math.max(Number(a.v), Number(b.v)),
   };
 }
