@@ -7,7 +7,10 @@ from dataclasses import dataclass
 @dataclass(frozen=True)
 class Config:
     sandbox_timeout_seconds: int = int(os.environ.get("SANDBOX_TIMEOUT_SECONDS", "5"))
+    cpp_timeout_seconds: int = int(os.environ.get("CPP_TIMEOUT_SECONDS", "20"))
+    javascript_timeout_seconds: int = int(os.environ.get("JAVASCRIPT_TIMEOUT_SECONDS", "30"))
     max_trace_events: int = int(os.environ.get("MAX_TRACE_EVENTS", "5000"))
+    max_child_processes: int = int(os.environ.get("MAX_CHILD_PROCESSES", "256"))
     allowed_origins: tuple[str, ...] = tuple(
         o.strip()
         for o in os.environ.get(

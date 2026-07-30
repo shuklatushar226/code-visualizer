@@ -96,11 +96,14 @@ def _set_child_limits() -> None:
     _try("RLIMIT_AS", (256 * 1024 * 1024, 256 * 1024 * 1024))
     _try("RLIMIT_CORE", (0, 0))
     _try("RLIMIT_FSIZE", (10 * 1024 * 1024, 10 * 1024 * 1024))
-    # Fork-bomb defence: cap processes per uid. We give a modest budget
-    # (256) — defeats real fork bombs (which want thousands) while
-    # leaving headroom for the JS tracer's Node + V8 worker threads
-    # and the C++ tracer's g++ + gdb children.
-    _try("RLIMIT_NPROC", (256, 256))
+    # RLIMIT_NPROC counts every process owned by this numeric UID on the host,
+    # including unrelated containers on some PaaS hosts. Allow those platforms
+    # to disable it and rely on their container/cgroup process ceiling instead.
+    if config.max_child_processes > 0:
+        _try(
+            "RLIMIT_NPROC",
+            (config.max_child_processes, config.max_child_processes),
+        )
 
 
 def run_python_in_sandbox(source: str, stdin: str = "") -> Dict[str, Any]:
@@ -115,7 +118,13 @@ def run_cpp_in_sandbox(source: str, stdin: str = "") -> Dict[str, Any]:
     timeout from the parent still applies, so a misbehaving toolchain
     won't hang the request.
     """
-    return _run_sandbox(source, CPP_LAUNCHER, "cpp", stdin=stdin)
+    return _run_sandbox(
+        source,
+        CPP_LAUNCHER,
+        "cpp",
+        stdin=stdin,
+        timeout_override=config.cpp_timeout_seconds,
+    )
 
 
 def run_js_in_sandbox(source: str, stdin: str = "") -> Dict[str, Any]:
@@ -125,7 +134,7 @@ def run_js_in_sandbox(source: str, stdin: str = "") -> Dict[str, Any]:
       - Skip rlimits: V8 launches several worker threads on startup
         and on some macOS kernels they trip RLIMIT_NPROC even at
         generous caps.
-      - 15 s wall-clock vs the default 5 s: Node cold start + Inspector
+      - A larger wall-clock budget than Python: Node cold start + Inspector
         handshake costs ~1 s before the first event; a 100-event trace
         then needs another ~2 s of websocket roundtrips.
     The Docker sandbox (USE_DOCKER_SANDBOX=1) remains the production
@@ -133,7 +142,9 @@ def run_js_in_sandbox(source: str, stdin: str = "") -> Dict[str, Any]:
     """
     return _run_sandbox(
         source, JS_LAUNCHER, "javascript",
-        stdin=stdin, apply_rlimits=False, timeout_override=15,
+        stdin=stdin,
+        apply_rlimits=False,
+        timeout_override=config.javascript_timeout_seconds,
     )
 
 
