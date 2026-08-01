@@ -111,6 +111,13 @@ solve(5)
 type Lang = "python" | "cpp" | "javascript" | "java";
 type Mode = "single" | "compare";
 
+const LANGUAGE_META: Record<Lang, { label: string; file: string; tone: string }> = {
+  python: { label: "Python", file: "main.py", tone: "PY" },
+  cpp: { label: "C++", file: "main.cpp", tone: "C++" },
+  javascript: { label: "JavaScript", file: "main.js", tone: "JS" },
+  java: { label: "Java", file: "Main.java", tone: "JV" },
+};
+
 export const App: React.FC = () => {
   const [mode, setMode] = useState<Mode>("single");
   const [language, setLanguage] = useState<Lang>("python");
@@ -264,26 +271,29 @@ export const App: React.FC = () => {
     <div className="app-shell">
       <header className="app-header">
         <div className="masthead-top">
-          <h1>
-            <span className="mono">DSV</span> — a code visualizer
-            <span className="em">no. 001</span>
-          </h1>
-          <span className="meta">
-            <label>
-              mode{" "}
+          <div className="brand-lockup">
+            <div className="brand-mark" aria-hidden="true">
+              <span className="brand-core">D</span>
+              <span className="brand-orbit orbit-one" />
+              <span className="brand-orbit orbit-two" />
+            </div>
+            <div>
+              <h1>
+                <span className="mono">DSV</span>
+                <span className="brand-name">Code Visualizer</span>
+              </h1>
+              <p className="brand-subtitle">Runtime intelligence for curious minds</p>
+            </div>
+          </div>
+
+          <div className="header-actions">
+            <span className="engine-status"><i /> Engine live</span>
+            <label className="mode-control">
+              <span className="control-label">Workspace</span>
               <select value={mode} onChange={(e) => onModeChange(e.target.value as Mode)}>
-                <option value="single">Single</option>
+                <option value="single">Visualize</option>
                 <option value="compare">Compare</option>
               </select>
-            </label>
-            <label>
-              backend{" "}
-              <input
-                type="text"
-                value={backend}
-                onChange={(e) => onBackendChange(e.target.value)}
-                style={{ width: 220 }}
-              />
             </label>
             <label className="explain-toggle">
               <input
@@ -297,23 +307,54 @@ export const App: React.FC = () => {
                     /* private mode */
                   }
                 }}
-              />{" "}
-              ✦ explain
+              />
+              <span className="toggle-track" aria-hidden="true"><i /></span>
+              AI explain
             </label>
-          </span>
+            <details className="settings-menu">
+              <summary aria-label="Backend settings">•••</summary>
+              <div className="settings-popover">
+                <label>
+                  Backend endpoint
+                  <input
+                    type="text"
+                    value={backend}
+                    onChange={(e) => onBackendChange(e.target.value)}
+                    placeholder="Same-origin"
+                  />
+                </label>
+                <small>Leave blank to use the deployed runtime.</small>
+              </div>
+            </details>
+          </div>
         </div>
-        <p className="tagline">
-          <strong>step through.</strong> see why. trace Python or C++ line-by-line —
-          variables, the call stack, linked lists, trees, recursion, patterns.
-        </p>
+        <div className="hero-line">
+          <p className="tagline">
+            <span className="eyebrow">SEE THE INVISIBLE</span>
+            <strong>Turn every line of code into a living system.</strong>
+            Trace variables, call stacks and data structures as they evolve.
+          </p>
+          <div className="capability-list" aria-label="Supported visualizations">
+            <span><i className="spark violet" /> Line-by-line</span>
+            <span><i className="spark cyan" /> Live memory</span>
+            <span><i className="spark green" /> Pattern-aware</span>
+          </div>
+        </div>
       </header>
 
       {mode === "single" ? (
         <div className="app-body">
           <section className="editor-pane">
+            <div className="pane-heading">
+              <div>
+                <span className="pane-index">01</span>
+                <strong>Write your algorithm</strong>
+              </div>
+              <span className="file-pill"><i /> {LANGUAGE_META[language].file}</span>
+            </div>
             <div className="editor-toolbar">
-              <label>
-                language{" "}
+              <label className="language-control">
+                <span className="language-glyph">{LANGUAGE_META[language].tone}</span>
                 <select
                   value={language}
                   onChange={(e) => onLanguageChange(e.target.value as Lang)}
@@ -325,18 +366,20 @@ export const App: React.FC = () => {
                 </select>
               </label>
               <label className="stdin">
-                stdin{" "}
+                <span>Input</span>
                 <input
                   type="text"
                   value={stdin}
                   onChange={(e) => setStdin(e.target.value)}
-                  placeholder="(optional)"
+                  placeholder="Optional stdin…"
                 />
               </label>
-              <button onClick={run} disabled={busy}>
+              <button className="run-button" onClick={run} disabled={busy}>
+                <span className="run-icon">{busy ? "◌" : "▶"}</span>
                 {busy ? "Tracing…" : "Run & Visualize"}
               </button>
               <button
+                className="share-button"
                 onClick={share}
                 disabled={!trace}
                 title="Save and copy a shareable link (ephemeral: lost on backend restart)"
@@ -353,33 +396,54 @@ export const App: React.FC = () => {
               className="editor-textarea"
               value={source}
               onChange={(e) => setSource(e.target.value)}
+              onKeyDown={(e) => {
+                if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+                  e.preventDefault();
+                  void run();
+                }
+              }}
               spellCheck={false}
+              aria-label="Source code editor"
             />
+            <div className="editor-statusbar">
+              <span>{source.split("\n").length} lines</span>
+              <span>UTF-8</span>
+              <span className="shortcut"><kbd>⌘</kbd><kbd>↵</kbd> to run</span>
+            </div>
           </section>
 
           <section className="viz-pane">
+            <div className="pane-heading result-heading">
+              <div>
+                <span className="pane-index">02</span>
+                <strong>Watch it execute</strong>
+              </div>
+              <span className={trace ? "trace-state is-ready" : "trace-state"}>
+                <i /> {trace ? `${trace.events.length} events captured` : "Awaiting trace"}
+              </span>
+            </div>
             {err && <div className="viz-error">Error: {err}</div>}
             {!err && !trace && (
               <div className="viz-empty">
                 <div className="empty-plate">
-                  <h2>
-                    step through<span className="period">.</span>
-                    <br />
-                    see <span className="accent">why</span><span className="period">.</span>
-                  </h2>
-                  <div className="empty-rule" aria-hidden="true" />
+                  <div className="execution-orbit" aria-hidden="true">
+                    <span className="orbit-ring ring-one" />
+                    <span className="orbit-ring ring-two" />
+                    <span className="orbit-node node-a" />
+                    <span className="orbit-node node-b" />
+                    <span className="orbit-node node-c" />
+                    <span className="orbit-center">▶</span>
+                  </div>
+                  <span className="empty-kicker">Your algorithm, illuminated</span>
+                  <h2>Ready to see your code <span className="accent">think?</span></h2>
                   <p>
-                    Paste Python on the left. Press{" "}
-                    <span className="kbd">Run &amp; Visualize</span>. Watch your code
-                    run, one line at a time.
+                    Run the sample or paste your own algorithm. We’ll transform its
+                    execution into an interactive timeline you can explore step by step.
                   </p>
-                  <div className="empty-anim" aria-hidden="true">
-                    <span className="bar" />
-                    <span className="bar" />
-                    <span className="bar" />
-                    <span className="bar" />
-                    <span className="bar" />
-                    <span className="bar" />
+                  <div className="empty-steps" aria-hidden="true">
+                    <span><b>1</b> Run</span><i />
+                    <span><b>2</b> Scrub</span><i />
+                    <span><b>3</b> Understand</span>
                   </div>
                 </div>
               </div>
@@ -396,6 +460,10 @@ export const App: React.FC = () => {
       ) : (
         <div className="app-body compare-body">
           <section className="editor-pane">
+            <div className="pane-heading">
+              <div><span className="pane-index">A/B</span><strong>Compare implementations</strong></div>
+              <span className="file-pill"><i /> divergence lab</span>
+            </div>
             <div className="editor-toolbar">
               <label>
                 language{" "}
@@ -409,7 +477,7 @@ export const App: React.FC = () => {
                   <option value="java">Java</option>
                 </select>
               </label>
-              <button onClick={compare} disabled={busy}>
+              <button className="run-button" onClick={compare} disabled={busy}>
                 {busy ? "Tracing both…" : "Compare"}
               </button>
             </div>
@@ -445,6 +513,10 @@ export const App: React.FC = () => {
           </section>
 
           <section className="viz-pane viz-pane-split">
+            <div className="pane-heading result-heading">
+              <div><span className="pane-index">Δ</span><strong>Trace difference</strong></div>
+              <span className="trace-state"><i /> synchronized</span>
+            </div>
             {err && <div className="viz-error">Error: {err}</div>}
             {!err && (!trace || !traceB) && (
               <div className="viz-empty">

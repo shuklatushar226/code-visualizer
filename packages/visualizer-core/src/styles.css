@@ -6,12 +6,12 @@
    Hosts override by re-declaring any of the variables below or by
    replacing the stylesheet outright. */
 
-@import url("https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@500,700,800&display=swap");
+@import url("https://api.fontshare.com/v2/css?f[]=satoshi@400,500,600,700,900&display=swap");
 @import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,700;1,400&family=Inter+Tight:wght@400;500;600&display=swap");
 
 :root {
   /* — Type — */
-  --font-display: "Cabinet Grotesk", "Inter Tight", system-ui, sans-serif;
+  --font-display: "Satoshi", "Inter Tight", system-ui, sans-serif;
   --font-sans: "Inter Tight", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
 
