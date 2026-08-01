@@ -21,7 +21,7 @@ jobs:
           cache: pip
       - run: sudo apt-get update && sudo apt-get install -y gdb g++ nodejs
       - run: pip install -e packages/tracer-python -e packages/tracer-cpp -e packages/tracer-js -e packages/tracer-java -e 'packages/backend[dev]'
-      - run: pytest packages/tracer-python packages/tracer-cpp packages/tracer-js packages/backend -v
+      - run: pytest --import-mode=importlib packages/tracer-python packages/tracer-cpp packages/tracer-js packages/backend -v
 
   node:
     name: Node (unit)
@@ -94,7 +94,10 @@ jobs:
       - run: docker build -t code-visualizer:ci .
       - name: Smoke test combined app
         run: |
-          docker run --detach --name code-visualizer-ci --publish 8000:8000 code-visualizer:ci
+          docker run --detach --name code-visualizer-ci \
+            --env MAX_CHILD_PROCESSES=0 \
+            --publish 8000:8000 \
+            code-visualizer:ci
           for attempt in {1..30}; do
             if curl --fail --silent http://localhost:8000/healthz; then
               break
