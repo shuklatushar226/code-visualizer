@@ -107,7 +107,7 @@ jobs:
           curl --fail --silent http://localhost:8000/healthz
           curl --fail --silent \
             --header 'Content-Type: application/json' \
-            --data '{"language":"python","source":"values = [3, 1, 2]\\nvalues.sort()\\nprint(values)"}' \
+            --data '{"language":"python","source":"values = [3, 1, 2]\nvalues.sort()\nprint(values)"}' \
             http://localhost:8000/trace |
             python3 -c 'import json,sys; trace=json.load(sys.stdin); assert trace["exit"]["status"] == "ok"; assert trace["events"]'
       - if: always()
