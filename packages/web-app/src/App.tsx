@@ -108,6 +108,33 @@ const DIFF_RIGHT = `def solve(n):
 solve(5)
 `;
 
+const BINARY_SEARCH_EXAMPLE = `def binary_search(nums, target):
+    lo, hi = 0, len(nums) - 1
+    while lo <= hi:
+        mid = (lo + hi) // 2
+        if nums[mid] == target:
+            return mid
+        if nums[mid] < target:
+            lo = mid + 1
+        else:
+            hi = mid - 1
+    return -1
+
+result = binary_search([1, 3, 5, 7, 9, 11, 13], 9)
+`;
+
+const TWO_SUM_EXAMPLE = `def two_sum(nums, target):
+    seen = {}
+    for index, value in enumerate(nums):
+        needed = target - value
+        if needed in seen:
+            return [seen[needed], index]
+        seen[value] = index
+    return []
+
+result = two_sum([2, 7, 11, 15], 9)
+`;
+
 type Lang = "python" | "cpp" | "javascript" | "java";
 type Mode = "single" | "compare";
 
@@ -207,6 +234,14 @@ export const App: React.FC = () => {
     }
   }
 
+  function loadExample(nextSource: string, nextLanguage: Lang = "python") {
+    setLanguage(nextLanguage);
+    setSource(nextSource);
+    setTrace(null);
+    setErr(null);
+    setShareUrl(null);
+  }
+
   async function run() {
     setBusy(true);
     setErr(null);
@@ -268,7 +303,12 @@ export const App: React.FC = () => {
   }
 
   return (
-    <div className="app-shell">
+    <div className="app-shell" data-language={language}>
+      <div className="ambient-mesh" aria-hidden="true">
+        <span className="mesh-blob blob-one" />
+        <span className="mesh-blob blob-two" />
+        <span className="mesh-blob blob-three" />
+      </div>
       <header className="app-header">
         <div className="masthead-top">
           <div className="brand-lockup">
@@ -339,6 +379,10 @@ export const App: React.FC = () => {
             <span><i className="spark cyan" /> Live memory</span>
             <span><i className="spark green" /> Pattern-aware</span>
           </div>
+        </div>
+        <div className="signal-rail" aria-hidden="true">
+          <span>source</span><i /><span>trace</span><i /><span>state</span><i /><span>insight</span>
+          <b />
         </div>
       </header>
 
@@ -444,6 +488,26 @@ export const App: React.FC = () => {
                     <span><b>1</b> Run</span><i />
                     <span><b>2</b> Scrub</span><i />
                     <span><b>3</b> Understand</span>
+                  </div>
+                  <div className="example-launcher">
+                    <span className="launcher-label">Or launch a visual story</span>
+                    <div className="example-grid">
+                      <button onClick={() => loadExample(DEFAULT_PYTHON)}>
+                        <i className="example-icon linked-icon"><span /><span /><span /></i>
+                        <span><strong>Reverse a list</strong><small>Pointers in motion</small></span>
+                        <b>↗</b>
+                      </button>
+                      <button onClick={() => loadExample(BINARY_SEARCH_EXAMPLE)}>
+                        <i className="example-icon search-icon"><span /></i>
+                        <span><strong>Binary search</strong><small>Watch the window shrink</small></span>
+                        <b>↗</b>
+                      </button>
+                      <button onClick={() => loadExample(TWO_SUM_EXAMPLE)}>
+                        <i className="example-icon hash-icon">#</i>
+                        <span><strong>Two sum</strong><small>Build a hash map live</small></span>
+                        <b>↗</b>
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
