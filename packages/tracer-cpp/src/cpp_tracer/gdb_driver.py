@@ -15,6 +15,13 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 
+# GDB can take longer than pygdbmi's one-second default to answer the first
+# command on cold, CPU-shared hosts such as Render's free tier. The backend's
+# outer sandbox timeout still bounds the complete trace request.
+_GDB_COMMAND_TIMEOUT_SECONDS = 1
+_GDB_STARTUP_TIMEOUT_SECONDS = 5
+
+
 class GdbDriver:
     def __init__(self, binary_path: str) -> None:
         try:
@@ -27,7 +34,10 @@ class GdbDriver:
 
         self._gdb = GdbController()
         self._binary = binary_path
-        self._send(f"-file-exec-and-symbols {binary_path}")
+        self._send(
+            f"-file-exec-and-symbols {binary_path}",
+            timeout_sec=_GDB_STARTUP_TIMEOUT_SECONDS,
+        )
         # Pretty-printing is a prerequisite for the var-object walker to see
         # STL containers as their logical children (vector of N) instead of
         # their internal _M_impl fields. libstdc++ ≥10 auto-loads its
@@ -156,14 +166,24 @@ class GdbDriver:
     # internals
     # ---------------------------------------------------------------- #
 
-    def _send(self, cmd: str) -> Optional[Dict[str, Any]]:
+    def _send(
+        self,
+        cmd: str,
+        *,
+        timeout_sec: float = _GDB_COMMAND_TIMEOUT_SECONDS,
+    ) -> Optional[Dict[str, Any]]:
         """Send a GDB/MI command and return the first result record, if any."""
-        for r in self._send_all(cmd):
+        for r in self._send_all(cmd, timeout_sec=timeout_sec):
             if r.get("type") == "result":
                 return r
         return None
 
-    def _send_all(self, cmd: str) -> List[Dict[str, Any]]:
+    def _send_all(
+        self,
+        cmd: str,
+        *,
+        timeout_sec: float = _GDB_COMMAND_TIMEOUT_SECONDS,
+    ) -> List[Dict[str, Any]]:
         """Send a GDB/MI command and return *all* response records.
 
         GDB/MI sends a mix of channels per command — `result` (the final
@@ -171,7 +191,10 @@ class GdbDriver:
         `notify`, and `target`. Some commands (notably `whatis`) put their
         useful output on the console stream and the result is empty.
         """
-        return self._gdb.write(cmd) or []
+        return self._gdb.write(
+            cmd,
+            timeout_sec=timeout_sec,
+        ) or []
 
 
 def compile_cpp(

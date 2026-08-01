@@ -110,5 +110,15 @@ jobs:
             --data '{"language":"python","source":"values = [3, 1, 2]\nvalues.sort()\nprint(values)"}' \
             http://localhost:8000/trace |
             python3 -c 'import json,sys; trace=json.load(sys.stdin); assert trace["exit"]["status"] == "ok"; assert trace["events"]'
+          curl --fail --silent \
+            --header 'Content-Type: application/json' \
+            --data '{"language":"cpp","source":"int main() {\n  int x = 2;\n  x += 3;\n  return x;\n}"}' \
+            http://localhost:8000/trace |
+            python3 -c 'import json,sys; trace=json.load(sys.stdin); assert trace["exit"]["status"] == "ok"; assert trace["events"]'
+          curl --fail --silent \
+            --header 'Content-Type: application/json' \
+            --data '{"language":"javascript","source":"const x = 2;\nconst y = x + 3;"}' \
+            http://localhost:8000/trace |
+            python3 -c 'import json,sys; trace=json.load(sys.stdin); assert trace["exit"]["status"] == "ok"; assert trace["events"]'
       - if: always()
         run: docker rm --force code-visualizer-ci || true

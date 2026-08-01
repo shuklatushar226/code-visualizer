@@ -73,6 +73,8 @@ def trace_source(source: str, stdin: str = "", max_events: int = 5000) -> Dict[s
                 break
             top = frames[0]
             line = int(top.get("line", 0)) if top.get("line") else 0
+            if not _is_user_frame(top, src_path, line):
+                break
             stack_repr = _encode_stack(drv, frames, heap, addr_to_id, catalog)
             event = {
                 "t": len(events),
@@ -104,6 +106,16 @@ def trace_source(source: str, stdin: str = "", max_events: int = 5000) -> Dict[s
         "exit": {"status": "ok", "message": None, "truncated": truncated},
         "events": events,
     }
+
+
+def _is_user_frame(frame: Dict[str, Any], source_path: Path, line: int) -> bool:
+    """Stop tracing after execution leaves the submitted translation unit."""
+    if line <= 0:
+        return False
+    reported = frame.get("fullname") or frame.get("file")
+    if not reported:
+        return False
+    return Path(str(reported)).name == source_path.name
 
 
 # ---------------------------------------------------------------------- #

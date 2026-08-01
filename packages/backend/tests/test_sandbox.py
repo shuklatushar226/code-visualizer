@@ -113,3 +113,16 @@ def test_nproc_limit_can_be_disabled_for_shared_container_hosts(monkeypatch):
     sandbox._set_child_limits()
 
     assert all(kind != sandbox.resource.RLIMIT_NPROC for kind, _ in calls)
+
+
+def test_cpp_limits_leave_memory_and_process_count_to_container(monkeypatch):
+    calls: list[tuple[int, tuple[int, int]]] = []
+    monkeypatch.setattr(sandbox.resource, "setrlimit", lambda kind, value: calls.append((kind, value)))
+
+    sandbox._set_cpp_child_limits()
+
+    kinds = {kind for kind, _ in calls}
+    assert sandbox.resource.RLIMIT_CPU in kinds
+    assert sandbox.resource.RLIMIT_FSIZE in kinds
+    assert sandbox.resource.RLIMIT_AS not in kinds
+    assert sandbox.resource.RLIMIT_NPROC not in kinds
