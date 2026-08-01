@@ -20,8 +20,8 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: pip
       - run: sudo apt-get update && sudo apt-get install -y gdb g++ nodejs
-      - run: pip install -e packages/tracer-python -e packages/tracer-cpp -e packages/tracer-js -e 'packages/backend[dev]'
-      - run: pytest packages/tracer-python packages/tracer-cpp packages/tracer-js packages/backend -v
+      - run: pip install -e packages/tracer-python -e packages/tracer-cpp -e packages/tracer-js -e packages/tracer-java -e 'packages/backend[dev]'
+      - run: pytest --import-mode=importlib packages/tracer-python packages/tracer-cpp packages/tracer-js packages/backend -v
 
   node:
     name: Node (unit)
@@ -50,7 +50,7 @@ jobs:
           node-version: "20"
           cache: npm
       - run: sudo apt-get update && sudo apt-get install -y gdb g++ nodejs
-      - run: pip install -e packages/tracer-python -e packages/tracer-cpp -e packages/tracer-js -e 'packages/backend[dev]'
+      - run: pip install -e packages/tracer-python -e packages/tracer-cpp -e packages/tracer-js -e packages/tracer-java -e 'packages/backend[dev]'
       - run: npm ci
       - run: npm run build --workspace=@dsa-viz/trace-schema --workspace=@dsa-viz/visualizer-core
       - run: npx playwright install --with-deps chromium
@@ -85,3 +85,30 @@ jobs:
       # xvfb-run provides a display so Chromium MV3 content scripts load.
       # Smoke test runs headless; the @persistent test needs a head.
       - run: xvfb-run -a npx playwright test --config=packages/browser-extension/playwright.config.ts
+
+  container:
+    name: Production container
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t code-visualizer:ci .
+      - name: Smoke test combined app
+        run: |
+          docker run --detach --name code-visualizer-ci \
+            --env MAX_CHILD_PROCESSES=0 \
+            --publish 8000:8000 \
+            code-visualizer:ci
+          for attempt in {1..30}; do
+            if curl --fail --silent http://localhost:8000/healthz; then
+              break
+            fi
+            sleep 1
+          done
+          curl --fail --silent http://localhost:8000/healthz
+          curl --fail --silent \
+            --header 'Content-Type: application/json' \
+            --data '{"language":"python","source":"values = [3, 1, 2]\nvalues.sort()\nprint(values)"}' \
+            http://localhost:8000/trace |
+            python3 -c 'import json,sys; trace=json.load(sys.stdin); assert trace["exit"]["status"] == "ok"; assert trace["events"]'
+      - if: always()
+        run: docker rm --force code-visualizer-ci || true

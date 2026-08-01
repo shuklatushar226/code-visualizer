@@ -103,3 +103,13 @@ def test_docker_path_taken_when_use_docker_sandbox_set(monkeypatch):
     run_python_in_sandbox("x = 1")
     assert captured["cmd"][0] == "docker"
     assert "run" in captured["cmd"]
+
+
+def test_nproc_limit_can_be_disabled_for_shared_container_hosts(monkeypatch):
+    calls: list[tuple[int, tuple[int, int]]] = []
+    monkeypatch.setattr(sandbox.resource, "setrlimit", lambda kind, value: calls.append((kind, value)))
+    monkeypatch.setattr(sandbox, "config", replace(sandbox.config, max_child_processes=0))
+
+    sandbox._set_child_limits()
+
+    assert all(kind != sandbox.resource.RLIMIT_NPROC for kind, _ in calls)

@@ -13,6 +13,15 @@ services:
       # Per-trace sandbox limits (the backend runs untrusted user code).
       - key: SANDBOX_TIMEOUT_SECONDS
         value: "5"
+      - key: CPP_TIMEOUT_SECONDS
+        value: "20"
+      - key: JAVASCRIPT_TIMEOUT_SECONDS
+        value: "30"
+      # Render already enforces a container-wide process ceiling. RLIMIT_NPROC
+      # is disabled here because shared-host UIDs can include unrelated
+      # processes and prevent g++/gdb from starting.
+      - key: MAX_CHILD_PROCESSES
+        value: "0"
       - key: MAX_TRACE_EVENTS
         value: "5000"
       # The SPA is same-origin, so it needs no CORS grant. "*" is kept so the
