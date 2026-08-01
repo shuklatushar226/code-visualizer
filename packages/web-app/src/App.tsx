@@ -308,6 +308,7 @@ export const App: React.FC = () => {
         <span className="mesh-blob blob-one" />
         <span className="mesh-blob blob-two" />
         <span className="mesh-blob blob-three" />
+        <span className="kinetic-wordmark">EXECUTE / OBSERVE / UNDERSTAND</span>
       </div>
       <header className="app-header">
         <div className="masthead-top">
@@ -387,8 +388,15 @@ export const App: React.FC = () => {
       </header>
 
       {mode === "single" ? (
-        <div className="app-body">
+        <div className="app-body single-body">
+          <aside className="workspace-rail" aria-label="Execution workflow">
+            <span className="rail-number">01</span>
+            <div className="rail-track"><i /><i /><i /></div>
+            <span className="rail-copy">CODE<br />TRACE<br />LEARN</span>
+            <span className="rail-live"><i /> LIVE</span>
+          </aside>
           <section className="editor-pane">
+            <span className="panel-watermark" aria-hidden="true">INPUT</span>
             <div className="pane-heading">
               <div>
                 <span className="pane-index">01</span>
@@ -457,6 +465,7 @@ export const App: React.FC = () => {
           </section>
 
           <section className="viz-pane">
+            <span className="panel-watermark viz-watermark" aria-hidden="true">TRACE</span>
             <div className="pane-heading result-heading">
               <div>
                 <span className="pane-index">02</span>
@@ -479,11 +488,16 @@ export const App: React.FC = () => {
                     <span className="orbit-center">▶</span>
                   </div>
                   <span className="empty-kicker">Your algorithm, illuminated</span>
-                  <h2>Ready to see your code <span className="accent">think?</span></h2>
+                  <h2>Don’t just run it. <span className="accent">See it think.</span></h2>
                   <p>
-                    Run the sample or paste your own algorithm. We’ll transform its
-                    execution into an interactive timeline you can explore step by step.
+                    Every mutation, pointer and call frame becomes a living visual story
+                    you can pause, scrub and understand.
                   </p>
+                  <div className="proof-strip" aria-label="Visualizer capabilities">
+                    <span><b>4</b> runtimes</span>
+                    <span><b>∞</b> states</span>
+                    <span><b>1</b> clear story</span>
+                  </div>
                   <div className="empty-steps" aria-hidden="true">
                     <span><b>1</b> Run</span><i />
                     <span><b>2</b> Scrub</span><i />
