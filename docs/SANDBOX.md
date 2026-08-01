@@ -13,10 +13,13 @@ Protocol JSON document on stdout. Three layers of defence stack:
    `preexec_fn` in `packages/backend/src/server/sandbox.py`. Each one is
    best-effort and wrapped in try/except so the child still starts when
    a particular limit isn't honoured on the current OS (notably
-   `RLIMIT_AS` on macOS Apple Silicon). Set `MAX_CHILD_PROCESSES=0` only
-   on hosts that already enforce a container-wide process ceiling; some
-   shared platforms count unrelated containers with the same numeric UID
-   when applying `RLIMIT_NPROC`.
+   `RLIMIT_AS` on macOS Apple Silicon). The GDB-backed C++ tracer retains
+   CPU/file/core limits but leaves its memory and process ceilings to the
+   service container because GDB exceeds the Python tracer's address-space
+   cap and spawns helper processes. Set `MAX_CHILD_PROCESSES=0` only on
+   hosts that already enforce a container-wide process ceiling; some shared
+   platforms count unrelated containers with the same numeric UID when
+   applying `RLIMIT_NPROC`.
 
 3. **Container (recommended for any hosted deployment)**:
    `packages/backend/Dockerfile.sandbox` builds a minimal image with

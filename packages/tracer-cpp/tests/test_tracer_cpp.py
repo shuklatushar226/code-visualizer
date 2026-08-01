@@ -11,12 +11,21 @@ import shutil
 import pytest
 
 from cpp_tracer import trace_source
+from cpp_tracer.cpp_tracer import _is_user_frame
 
 
 gdb_available = shutil.which("gdb") is not None and shutil.which("g++") is not None
 needs_toolchain = pytest.mark.skipif(
     not gdb_available, reason="requires g++ and gdb on PATH"
 )
+
+
+def test_user_frame_filter_stops_after_main_returns(tmp_path):
+    source = tmp_path / "main.cpp"
+
+    assert _is_user_frame({"fullname": str(source), "line": "4"}, source, 4)
+    assert not _is_user_frame({"file": "libc-start.c", "line": "128"}, source, 128)
+    assert not _is_user_frame({"file": "main.cpp"}, source, 0)
 
 
 def test_returns_error_when_gdb_missing(monkeypatch):

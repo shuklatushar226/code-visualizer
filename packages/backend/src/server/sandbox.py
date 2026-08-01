@@ -24,7 +24,7 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Callable, Dict
 
 from .config import config
 
@@ -80,7 +80,7 @@ def _child_env() -> Dict[str, str]:
     return {k: os.environ[k] for k in _SAFE_CHILD_ENV_KEYS if k in os.environ}
 
 
-def _set_child_limits() -> None:
+def _set_limits(*, address_space: bool, process_count: bool) -> None:
     def _try(rlimit_name: str, value: tuple[int, int]) -> None:
         rlimit = getattr(resource, rlimit_name, None)
         if rlimit is None:
@@ -93,17 +93,29 @@ def _set_child_limits() -> None:
             pass
 
     _try("RLIMIT_CPU", (config.sandbox_timeout_seconds, config.sandbox_timeout_seconds))
-    _try("RLIMIT_AS", (256 * 1024 * 1024, 256 * 1024 * 1024))
+    if address_space:
+        _try("RLIMIT_AS", (256 * 1024 * 1024, 256 * 1024 * 1024))
     _try("RLIMIT_CORE", (0, 0))
     _try("RLIMIT_FSIZE", (10 * 1024 * 1024, 10 * 1024 * 1024))
     # RLIMIT_NPROC counts every process owned by this numeric UID on the host,
     # including unrelated containers on some PaaS hosts. Allow those platforms
     # to disable it and rely on their container/cgroup process ceiling instead.
-    if config.max_child_processes > 0:
+    if process_count and config.max_child_processes > 0:
         _try(
             "RLIMIT_NPROC",
             (config.max_child_processes, config.max_child_processes),
         )
+
+
+def _set_child_limits() -> None:
+    _set_limits(address_space=True, process_count=True)
+
+
+def _set_cpp_child_limits() -> None:
+    # GDB and the debuggee need more virtual address space than the Python
+    # tracer, and GDB spawns helper processes. Retain CPU/file/core limits;
+    # the service container supplies the memory and process ceilings.
+    _set_limits(address_space=False, process_count=False)
 
 
 def run_python_in_sandbox(source: str, stdin: str = "") -> Dict[str, Any]:
@@ -123,6 +135,7 @@ def run_cpp_in_sandbox(source: str, stdin: str = "") -> Dict[str, Any]:
         CPP_LAUNCHER,
         "cpp",
         stdin=stdin,
+        limit_setter=_set_cpp_child_limits,
         timeout_override=config.cpp_timeout_seconds,
     )
 
@@ -143,7 +156,7 @@ def run_js_in_sandbox(source: str, stdin: str = "") -> Dict[str, Any]:
     return _run_sandbox(
         source, JS_LAUNCHER, "javascript",
         stdin=stdin,
-        apply_rlimits=False,
+        limit_setter=None,
         timeout_override=config.javascript_timeout_seconds,
     )
 
@@ -160,7 +173,7 @@ def run_java_in_sandbox(source: str, stdin: str = "") -> Dict[str, Any]:
     """
     return _run_sandbox(
         source, JAVA_LAUNCHER, "java",
-        stdin=stdin, apply_rlimits=False, timeout_override=45,
+        stdin=stdin, limit_setter=None, timeout_override=45,
     )
 
 
@@ -170,7 +183,7 @@ def _run_sandbox(
     language: str,
     *,
     stdin: str = "",
-    apply_rlimits: bool = True,
+    limit_setter: Callable[[], None] | None = _set_child_limits,
     timeout_override: int | None = None,
 ) -> Dict[str, Any]:
     if len(source.encode("utf-8")) > config.max_source_bytes:
@@ -187,8 +200,8 @@ def _run_sandbox(
         cmd = [sys.executable, "-I", "-c", launcher]
         child_env = _child_env()
 
-    use_preexec = apply_rlimits and os.name == "posix" and not config.use_docker_sandbox
-    preexec = _set_child_limits if use_preexec else None
+    use_preexec = limit_setter is not None and os.name == "posix" and not config.use_docker_sandbox
+    preexec = limit_setter if use_preexec else None
     base_timeout = timeout_override if timeout_override is not None else config.sandbox_timeout_seconds
     try:
         proc = subprocess.run(
