@@ -31,11 +31,14 @@ export const TreeView: React.FC<TreeViewProps> = ({
   width = 480,
   height = 280,
 }) => {
-  const fields = childFields.split(",").map((s) => s.trim());
+  const fields = useMemo(
+    () => childFields.split(",").map((s) => s.trim()),
+    [childFields],
+  );
   const root = useMemo(() => buildTree(rootId, heap, fields, new Set()), [
     rootId,
     heap,
-    childFields,
+    fields,
   ]);
   // Both hooks must run on every render: if `layout` lived after the early
   // return below, scrubbing to a step where buildTree flips between null and a

@@ -11,7 +11,7 @@ test("runs the default Python program and produces a trace", async ({ page }) =>
   const tCounter = page.locator(".dsa-viz-tcounter");
   await expect(tCounter).toBeVisible();
   const initial = await tCounter.textContent();
-  expect(initial).toMatch(/^t = 0 \/ \d+/);
+  expect(initial).toMatch(/^t = [1-9]\d* \/ \d+/);
 
   // A linked-list algorithm uses several constructor calls but is not
   // recursive. Its data-structure view should be selected by default.
@@ -145,7 +145,35 @@ test("share button persists a trace and the resulting URL loads it back", async 
   await page.goto(href!);
   await expect(page.locator(".dsa-viz-tcounter")).toBeVisible();
   // The restored trace should have the same total events.
-  await expect(page.locator(".dsa-viz-tcounter")).toHaveText(/^t = 0 \/ 51$/);
+  await expect(page.locator(".dsa-viz-tcounter")).toHaveText(/^t = [1-9]\d* \/ 51$/);
+});
+
+test("example cards launch a visual story in one click", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: /Binary search/ }).click();
+  await expect(page.locator(".dsa-viz-tcounter")).toBeVisible();
+  await expect(page.locator(".dsa-viz-codepane")).toContainText("def binary_search");
+});
+
+test("hosted capability response disables unavailable runtimes", async ({ page }) => {
+  await page.route("**/capabilities", async (route) => {
+    await route.fulfill({
+      json: {
+        runtimes: {
+          python: { available: true, reason: null },
+          cpp: { available: true, reason: null },
+          javascript: { available: true, reason: null },
+          java: { available: false, reason: "requires JDK 17+" },
+        },
+        ai_explain: { available: false, reason: "not configured" },
+        isolation: "process",
+      },
+    });
+  });
+  await page.goto("/");
+  const language = page.locator(".language-control select");
+  await expect(language.locator('option[value="java"]')).toHaveAttribute("disabled", "");
+  await expect(page.getByText("Java · local only")).toBeVisible();
 });
 
 test("compare mode runs two programs and highlights the first divergence", async ({ page }) => {

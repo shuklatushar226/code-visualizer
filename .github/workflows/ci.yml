@@ -21,7 +21,7 @@ jobs:
           cache: pip
       - run: sudo apt-get update && sudo apt-get install -y gdb g++ nodejs
       - run: pip install -e packages/tracer-python -e packages/tracer-cpp -e packages/tracer-js -e packages/tracer-java -e 'packages/backend[dev]'
-      - run: pytest --import-mode=importlib packages/tracer-python packages/tracer-cpp packages/tracer-js packages/backend -v
+      - run: pytest --import-mode=importlib packages/tracer-python packages/tracer-cpp packages/tracer-js packages/tracer-java packages/backend -v
 
   node:
     name: Node (unit)
@@ -35,6 +35,23 @@ jobs:
       - run: npm ci
       - run: npm run build --workspace=@dsa-viz/trace-schema --workspace=@dsa-viz/visualizer-core
       - run: npm run test:js
+
+  lint:
+    name: Lint and static checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: pip install ruff
+      - run: npm ci
+      - run: npm run lint
 
   e2e:
     name: Playwright e2e

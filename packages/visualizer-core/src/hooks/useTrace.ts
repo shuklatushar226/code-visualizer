@@ -2,7 +2,7 @@
  * useTrace — fetches a Trace Event Protocol document from the backend.
  */
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { Language, Trace } from "@dsa-viz/trace-schema";
 import { traceClient } from "../lib/traceClient";
 

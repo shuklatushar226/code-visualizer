@@ -5,10 +5,8 @@ from __future__ import annotations
 from dataclasses import replace
 
 from fastapi.testclient import TestClient
-
 from server.main import app
 from server.routes import trace as trace_route
-
 
 client = TestClient(app)
 

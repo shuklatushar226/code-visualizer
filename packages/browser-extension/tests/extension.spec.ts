@@ -54,7 +54,7 @@ test.describe("@persistent extension wiring against a LeetCode-mock fixture", ()
     // Content scripts run at document_idle; give them a moment.
     try {
       await page.waitForSelector(".dsa-viz-fab", { timeout: 8_000 });
-    } catch (e) {
+    } catch {
       const bodyChildren = await page.evaluate(() =>
         Array.from(document.body.children).map((c) => c.tagName + "." + c.className),
       );

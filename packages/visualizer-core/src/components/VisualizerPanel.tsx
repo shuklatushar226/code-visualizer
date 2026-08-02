@@ -42,12 +42,16 @@ export interface VisualizerPanelProps {
  */
 export const VisualizerPanel: React.FC<VisualizerPanelProps> = ({
   trace,
-  initialT = 0,
+  initialT,
   className,
   showExplainer = false,
   explainerBackend,
 }) => {
-  const playback = usePlayback(trace.events.length, initialT);
+  const meaningfulStart = useMemo(
+    () => initialT ?? firstMeaningfulEventIndex(trace),
+    [initialT, trace],
+  );
+  const playback = usePlayback(trace.events.length, meaningfulStart);
   const event = trace.events[playback.t];
 
   const callCount = useMemo(
@@ -126,6 +130,15 @@ export const VisualizerPanel: React.FC<VisualizerPanelProps> = ({
     </div>
   );
 };
+
+/** Pick the earliest event that gives a learner something concrete to inspect. */
+export function firstMeaningfulEventIndex(trace: Trace): number {
+  const index = trace.events.findIndex((event) => {
+    if (Object.keys(event.heap).length > 0) return true;
+    return event.stack.some((frame) => Object.keys(frame.locals).length > 0);
+  });
+  return index === -1 ? 0 : index;
+}
 
 function computeOverlay(hit: PatternHit | null, frame: Frame | undefined): PatternOverlayState | null {
   if (!hit || !frame || !hit.arrayLocalName) return null;

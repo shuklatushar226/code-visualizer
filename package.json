@@ -2,6 +2,7 @@
   "name": "code-visualizer",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "description": "Universal line-by-line DSA code visualizer for placement prep.",
   "workspaces": [
     "packages/trace-schema",
@@ -15,10 +16,19 @@
     "dev:web": "npm run dev --workspace=@dsa-viz/web-app",
     "dev:ext": "npm run dev --workspace=@dsa-viz/browser-extension",
     "test": "npm run test:py && npm run test:js",
-    "test:py": "python -m pytest packages/backend packages/tracer-python packages/tracer-cpp",
+    "test:py": "python3 -m pytest --import-mode=importlib packages/backend packages/tracer-python packages/tracer-cpp packages/tracer-js packages/tracer-java",
     "test:js": "npm run test --workspace=@dsa-viz/trace-schema --workspace=@dsa-viz/visualizer-core",
     "test:e2e": "npm run test --workspace=@dsa-viz/web-app",
-    "lint": "echo 'TODO: add eslint config'"
+    "lint": "npm run lint:ts && npm run lint:py",
+    "lint:ts": "eslint .",
+    "lint:py": "python3 -m ruff check packages/backend"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "eslint": "^9.39.5",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "globals": "^15.15.0",
+    "typescript-eslint": "^8.65.0"
+  }
 }

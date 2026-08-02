@@ -4,9 +4,10 @@ Each test reproduces a confirmed defect; they fail on the pre-fix code.
 """
 from __future__ import annotations
 
+import json
+
 import pytest
 from fastapi.testclient import TestClient
-
 from server import sandbox
 from server.main import app
 from server.routes import explain as explain_route
@@ -19,30 +20,41 @@ client = TestClient(app)
 # ───────────────────────── /share infinite loop ───────────────────────── #
 
 def _reset_share():
-    share_route._STORE.clear()
-    share_route._ORDER.clear()
+    share_route._reset_connection_for_tests(":memory:")
+    return share_route._connection()
 
 
 def test_make_code_reuses_code_for_identical_trace():
     """Saving the SAME trace twice must reuse its code, not hang forever."""
-    _reset_share()
+    db = _reset_share()
     trace = {"version": "0.1", "hello": "world"}
-    c1 = share_route._make_code(trace)
-    share_route._STORE[c1] = trace
-    share_route._ORDER.append(c1)
-    c2 = share_route._make_code(trace)  # before fix: infinite loop
+    encoded = json.dumps(trace, sort_keys=True, separators=(",", ":"))
+    c1 = share_route._make_code(encoded, db)
+    db.execute(
+        "INSERT INTO shared_traces VALUES (?, ?, ?, ?)",
+        (c1, encoded, len(encoded), 0),
+    )
+    c2 = share_route._make_code(encoded, db)  # before fix: infinite loop
     assert c2 == c1
 
 
 def test_make_code_resolves_distinct_trace_collision():
     """When a DIFFERENT trace already occupies the natural prefix, _make_code
     must return a different, terminating 8-char code."""
-    _reset_share()
+    db = _reset_share()
     trace = {"version": "0.1", "hello": "world"}
-    natural = share_route._make_code(trace)
-    share_route._STORE[natural] = {"version": "0.1", "something": "else"}
-    share_route._ORDER.append(natural)
-    new_code = share_route._make_code(trace)  # before fix: infinite loop
+    encoded = json.dumps(trace, sort_keys=True, separators=(",", ":"))
+    natural = share_route._make_code(encoded, db)
+    other = json.dumps(
+        {"version": "0.1", "something": "else"},
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    db.execute(
+        "INSERT INTO shared_traces VALUES (?, ?, ?, ?)",
+        (natural, other, len(other), 0),
+    )
+    new_code = share_route._make_code(encoded, db)  # before fix: infinite loop
     assert new_code != natural
     assert len(new_code) == 8
 

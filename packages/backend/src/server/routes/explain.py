@@ -15,7 +15,6 @@ old stub).
 """
 from __future__ import annotations
 
-import asyncio
 import hashlib
 import json
 import os
@@ -28,7 +27,6 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from ..ai import AIProvider, AIProviderError, make_provider
-
 
 router = APIRouter()
 
