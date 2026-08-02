@@ -5,15 +5,14 @@ Homebrew, but the test asserts schema-shape only (no step-specific
 value assertions) for the same reason the C++ tracer's smoke does:
 V8 stepping cadence varies across Node versions.
 """
+
 from __future__ import annotations
 
 import shutil
 from pathlib import Path
 
 import pytest
-
 from js_tracer import trace_source
-
 
 node_available = shutil.which("node") is not None
 needs_node = pytest.mark.skipif(not node_available, reason="requires node on PATH")
@@ -42,13 +41,30 @@ def test_syntax_error_surfaces_in_stderr_or_error_status():
 
 
 @needs_node
+def test_uncaught_runtime_error_is_reported_as_error_trace():
+    res = trace_source("const value = 7;\nthrow new Error('expected-7');\n", max_events=50)
+    assert res["exit"]["status"] == "error"
+    assert "expected-7" in res["exit"]["message"]
+    assert any(event["kind"] == "exception" for event in res["events"])
+
+
+@needs_node
+def test_builtin_helpers_do_not_emit_node_internal_steps():
+    source = (
+        "const values = [1, 2, 3];\n"
+        "const total = values.reduce((a, b) => a + b, 0);\n"
+        "console.log(total);\n"
+    )
+    res = trace_source(source, max_events=500)
+    assert res["exit"]["status"] == "ok"
+    assert 1 <= len(res["events"]) < 100
+
+
+@needs_node
 def test_simple_program_produces_valid_trace():
     """Trace examples/js/fib.js, assert the schema holds on every
     event. No value-specific assertions for the reasons above."""
-    src_path = (
-        Path(__file__).resolve().parent.parent.parent.parent
-        / "examples" / "js" / "fib.js"
-    )
+    src_path = Path(__file__).resolve().parent.parent.parent.parent / "examples" / "js" / "fib.js"
     if not src_path.exists():
         pytest.skip(f"example missing: {src_path}")
     res = trace_source(src_path.read_text(), max_events=200)

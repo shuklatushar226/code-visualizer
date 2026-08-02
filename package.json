@@ -19,6 +19,7 @@
     "test:py": "python3 -m pytest --import-mode=importlib packages/backend packages/tracer-python packages/tracer-cpp packages/tracer-js packages/tracer-java",
     "test:js": "npm run test --workspace=@dsa-viz/trace-schema --workspace=@dsa-viz/visualizer-core",
     "test:e2e": "npm run test --workspace=@dsa-viz/web-app",
+    "test:soak": "python3 scripts/soak_test.py",
     "lint": "npm run lint:ts && npm run lint:py",
     "lint:ts": "eslint .",
     "lint:py": "python3 -m ruff check packages/backend"

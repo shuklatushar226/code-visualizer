@@ -138,8 +138,12 @@ to any of the front-ends.
 ```bash
 npm test          # py + js unit suites (fast)
 npm run test:e2e  # Playwright e2e (slow, launches both servers)
+npm run test:soak # 1,000 HTTP cases against a local production container
 npm run lint      # ESLint + Ruff
 ```
+
+See [`docs/RELIABILITY.md`](docs/RELIABILITY.md) for the deterministic coverage
+matrix, trace invariants, reproduction steps, and latest verified result.
 
 ---
 
@@ -158,7 +162,7 @@ See `docs/ROADMAP.md` for the full plan. Where things stand:
 * **M5 – Recursion tree view** ✅ — d3-hierarchy layout of call/return
   events, active-frame highlight
 
-**Quality floor**: 208 automated checks on this release — 119 passing pytest
+**Quality floor**: 210 automated checks on this release — 121 passing pytest
 tests (plus 3 platform-gated skips), 78 Vitest tests, 8 real web journeys, and
 3 extension tests. GitHub Actions also builds and smoke-tests the same
 production container used by Render.

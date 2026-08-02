@@ -53,3 +53,4 @@ npm-debug.log
 # Playwright test outputs
 test-results/
 playwright-report/
+artifacts/soak-report.json
