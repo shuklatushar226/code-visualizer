@@ -20,6 +20,23 @@ export interface BuildOptions {
 }
 
 /**
+ * Return true only when the trace contains a real recursive call. Counting all
+ * calls is not enough: constructors and helper functions can produce a large
+ * call tree while the algorithm's data structure is still the useful view.
+ * A repeated function within one live stack catches direct and mutual
+ * recursion without treating sequential calls as recursive.
+ */
+export function hasRecursiveCalls(events: TraceEvent[]): boolean {
+  return events.some((ev) => {
+    if (ev.kind !== "call" || ev.stack.length < 2) return false;
+    const current = ev.stack[ev.stack.length - 1];
+    return ev.stack
+      .slice(0, -1)
+      .some((ancestor) => ancestor.func === current.func && ancestor.file === current.file);
+  });
+}
+
+/**
  * Build a recursion tree from the event sequence. Drives off the `call` and
  * `return` event kinds (the trace contract guarantees one per function
  * boundary). Stack-depth diffing alone is insufficient because a return-and-

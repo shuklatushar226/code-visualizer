@@ -6,6 +6,7 @@ import {
   findActiveCall,
   formatArgs,
   formatArgValue,
+  hasRecursiveCalls,
 } from "../recursionTree";
 
 const frame = (func: string, locals: Record<string, number> = {}, args: string[] = []): Frame => ({
@@ -109,6 +110,40 @@ describe("buildRecursionTree", () => {
     ];
     const root = buildRecursionTree(events);
     expect(countCalls(root)).toBe(1);
+  });
+});
+
+describe("hasRecursiveCalls", () => {
+  it("does not mistake sequential constructor calls for recursion", () => {
+    const moduleFrame = frame("<module>");
+    const init = frame("__init__", { val: 1 }, ["val"]);
+    const reverse = frame("reverse");
+    const events: TraceEvent[] = [
+      ev("call", [moduleFrame]),
+      ev("call", [moduleFrame, init]),
+      ev("return", [moduleFrame, init]),
+      ev("call", [moduleFrame, init]),
+      ev("return", [moduleFrame, init]),
+      ev("call", [moduleFrame, reverse]),
+      ev("return", [moduleFrame, reverse]),
+      ev("return", [moduleFrame]),
+    ];
+
+    expect(hasRecursiveCalls(events)).toBe(false);
+  });
+
+  it("detects a function repeated within the active stack", () => {
+    const moduleFrame = frame("<module>");
+    const fib3 = frame("fib", { n: 3 }, ["n"]);
+    const fib2 = frame("fib", { n: 2 }, ["n"]);
+
+    expect(
+      hasRecursiveCalls([
+        ev("call", [moduleFrame]),
+        ev("call", [moduleFrame, fib3]),
+        ev("call", [moduleFrame, fib3, fib2]),
+      ]),
+    ).toBe(true);
   });
 });
 

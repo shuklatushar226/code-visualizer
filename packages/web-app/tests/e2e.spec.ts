@@ -13,12 +13,22 @@ test("runs the default Python program and produces a trace", async ({ page }) =>
   const initial = await tCounter.textContent();
   expect(initial).toMatch(/^t = 0 \/ \d+/);
 
+  // A linked-list algorithm uses several constructor calls but is not
+  // recursive. Its data-structure view should be selected by default.
+  const heapTab = page.locator('.dsa-viz-tabs button[role="tab"]', { hasText: "Heap" });
+  await expect(heapTab).toHaveAttribute("aria-selected", "true");
+
   // Recursion arguments must explain what pointers reference instead of
   // exposing process-specific Python ids such as next=→4960.
+  const recursionTab = page.locator('.dsa-viz-tabs button[role="tab"]', {
+    hasText: "Recursion",
+  });
+  await recursionTab.click();
   const recursionView = page.locator(".dsa-viz-recursion");
   await expect(recursionView).toContainText("next=→Node(4)");
   await expect(recursionView).toContainText("head=→Node(1)");
   await expect(recursionView).not.toContainText(/→\d{4}/);
+  await heapTab.click();
 
   // Seek to the final event via the range slider.
   const slider = page.locator('input[type="range"]');
@@ -40,10 +50,6 @@ test("runs the default Python program and produces a trace", async ({ page }) =>
   const callStack = page.locator(".dsa-viz-callstack");
   await expect(callStack).toContainText("Node(4)");
   await expect(callStack).not.toContainText(/h_\d+/);
-
-  // The linked-list demo has 6 calls (4x Node.__init__ + reverse + <module>),
-  // so the Recursion tab auto-selects. Switch to Heap to find list views.
-  await page.locator(".dsa-viz-tabs button", { hasText: "Heap" }).click();
 
   // At the final event, the visualizer renders the reversed list. Search all
   // linked-list views for the [4,3,2,1] sequence (head/result ordering can vary).
