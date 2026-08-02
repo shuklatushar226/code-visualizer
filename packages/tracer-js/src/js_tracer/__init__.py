@@ -10,17 +10,17 @@ max_events) → dict`. Internally the orchestrator is async (websocket
 + subprocess); `asyncio.run` wraps the entry so the backend's sync
 sandbox launcher can call it directly.
 """
+
 from __future__ import annotations
 
 import asyncio
-import os
 import shutil
 import tempfile
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from .inspector import InspectorError, InspectorSession, spawn_node_inspector
-from .values import alloc_id, encode_remote_object
+from .values import encode_remote_object
 
 __version__ = "0.1.0"
 
@@ -44,9 +44,7 @@ def trace_source(source: str, stdin: str = "", max_events: int = 5000) -> Dict[s
         return _err_result(source, stdin, f"tracer failed: {type(e).__name__}: {e}")
 
 
-async def _trace_source_async(
-    source: str, stdin: str, max_events: int
-) -> Dict[str, Any]:
+async def _trace_source_async(source: str, stdin: str, max_events: int) -> Dict[str, Any]:
     work = Path(tempfile.mkdtemp(prefix="dsaviz-js-"))
     script_path = work / "user.js"
     script_path.write_text(source, encoding="utf-8")
@@ -57,17 +55,21 @@ async def _trace_source_async(
     proc, ws_url = await spawn_node_inspector(str(script_path))
     events: List[dict] = []
     truncated = False
+    error_message: Optional[str] = None
     addr_to_id: Dict[str, str] = {}
     heap: Dict[str, Dict[str, Any]] = {}
 
     try:
         async with await InspectorSession.connect(ws_url) as session:
             await session.enable_domains()
+            await session.pause_on_uncaught_exceptions()
             await session.run_if_waiting_for_debugger()
 
             prev_depth = 0
+            seen_user_frame = False
             async for paused in session.paused_events():
                 all_frames = paused.get("callFrames") or []
+
                 # V8 reports url="" on every callFrame; resolve via the
                 # scriptId → url map from Debugger.scriptParsed. A frame
                 # is "user code" if its script's URL matches the temp
@@ -77,17 +79,55 @@ async def _trace_source_async(
                     sid = f.get("location", {}).get("scriptId")
                     url = session.script_urls.get(sid, "") if sid else ""
                     return url == user_script_url
+
                 call_frames = [f for f in all_frames if is_user_frame(f)]
                 if not call_frames:
-                    # Currently inside Node internals; step out and try
-                    # again without emitting an event.
+                    # Before the user script starts, step through Node's
+                    # bootstrap until its frame appears. Once user code has
+                    # run, leaving the final user frame means execution is
+                    # complete; continuing to single-step Node internals can
+                    # otherwise consume the entire sandbox timeout.
                     try:
+                        if seen_user_frame:
+                            await session.resume()
+                            break
                         await session.step_into()
                     except InspectorError:
                         break
                     continue
 
+                # A user frame can remain lower in the stack while the top
+                # frame is a Node/built-in helper (for example Array.reduce).
+                # Emitting and stepping into that helper creates hundreds of
+                # duplicate user-line events. Step back out to user code.
+                if not is_user_frame(all_frames[0]):
+                    try:
+                        await session.step_out()
+                    except InspectorError:
+                        break
+                    continue
+
+                seen_user_frame = True
                 depth = len(call_frames)
+
+                if paused.get("reason") == "exception":
+                    data = paused.get("data") or {}
+                    error_message = data.get("description") or data.get("value") or "uncaught JavaScript exception"
+                    event = await _make_event(
+                        kind="exception",
+                        paused=paused,
+                        call_frames=call_frames,
+                        session=session,
+                        heap=heap,
+                        addr_to_id=addr_to_id,
+                        t=len(events),
+                    )
+                    event["exception"] = {
+                        "type": data.get("className") or "Error",
+                        "message": str(error_message),
+                    }
+                    events.append(event)
+                    break
 
                 # Synthesise call / return from depth diff so the trace
                 # carries the `kind:"call"`/`kind:"return"` markers the
@@ -159,14 +199,22 @@ async def _trace_source_async(
         "source": source,
         "stdin": stdin,
         "stdout": "",
-        "stderr": "",
-        "exit": {"status": "ok", "message": None, "truncated": truncated},
+        "stderr": str(error_message or ""),
+        "exit": {
+            "status": "error" if error_message else "ok",
+            "message": str(error_message) if error_message else None,
+            "truncated": truncated,
+        },
         "events": events,
     }
 
 
 NODE_WRAPPER_LOCALS = {
-    "exports", "require", "module", "__filename", "__dirname",
+    "exports",
+    "require",
+    "module",
+    "__filename",
+    "__dirname",
 }
 
 
@@ -219,16 +267,16 @@ async def _make_event(
                     value_ro = p.get("value")
                     if value_ro is None:
                         continue
-                    locals_map[name] = await encode_remote_object(
-                        value_ro, session, addr_to_id, heap
-                    )
-        stack_repr.append({
-            "func": func,
-            "file": file,
-            "line": ln,
-            "locals": locals_map,
-            "args": list(locals_map.keys()) if is_top else [],
-        })
+                    locals_map[name] = await encode_remote_object(value_ro, session, addr_to_id, heap)
+        stack_repr.append(
+            {
+                "func": func,
+                "file": file,
+                "line": ln,
+                "locals": locals_map,
+                "args": list(locals_map.keys()) if is_top else [],
+            }
+        )
 
     return {
         "t": t,

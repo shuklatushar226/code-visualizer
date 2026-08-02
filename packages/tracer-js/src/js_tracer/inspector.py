@@ -14,10 +14,13 @@ resume}, Runtime.{enable,runIfWaitingForDebugger,getProperties,
 callFunctionOn,executionContextDestroyed}. Each method is one async
 function on the session.
 """
+
 from __future__ import annotations
 
 import asyncio
 import json
+import re
+import subprocess
 from typing import Any, AsyncIterator, Dict, Optional
 
 import websockets
@@ -149,8 +152,14 @@ class InspectorSession:
     async def run_if_waiting_for_debugger(self) -> None:
         await self.send("Runtime.runIfWaitingForDebugger")
 
+    async def pause_on_uncaught_exceptions(self) -> None:
+        await self.send("Debugger.setPauseOnExceptions", {"state": "uncaught"})
+
     async def step_into(self) -> None:
         await self.send("Debugger.stepInto")
+
+    async def step_out(self) -> None:
+        await self.send("Debugger.stepOut")
 
     async def resume(self) -> None:
         await self.send("Debugger.resume")
@@ -172,9 +181,7 @@ class InspectorSession:
         )
         return result.get("result", []) or []
 
-    async def call_function_on(
-        self, object_id: str, function_declaration: str
-    ) -> Dict[str, Any]:
+    async def call_function_on(self, object_id: str, function_declaration: str) -> Dict[str, Any]:
         """Run `function_declaration` with `this` bound to `objectId`.
 
         Used to invoke `[...this.entries()]` on Maps / Sets so we get
@@ -215,16 +222,10 @@ class InspectorSession:
 # in __init__.py; lives here so test fixtures can monkeypatch it.
 # ────────────────────────────────────────────────────────────────────
 
-import re
-import subprocess
-
-
 WS_URL_PATTERN = re.compile(r"ws://[^\s]+")
 
 
-async def spawn_node_inspector(
-    script_path: str, *, timeout_s: float = 5.0
-) -> tuple[subprocess.Popen, str]:
+async def spawn_node_inspector(script_path: str, *, timeout_s: float = 5.0) -> tuple[subprocess.Popen, str]:
     """Start `node --inspect-brk=127.0.0.1:0 <script>` and return
     (process, ws_url). Reads stderr (where Node prints the listener URL)
     with a short polling timeout so a misbehaving Node doesn't hang us.
