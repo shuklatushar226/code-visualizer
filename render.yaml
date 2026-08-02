@@ -24,6 +24,11 @@ services:
         value: "0"
       - key: MAX_TRACE_EVENTS
         value: "5000"
+      # Bound expensive execution work before it reaches a tracer process.
+      - key: MAX_CONCURRENT_TRACES
+        value: "2"
+      - key: TRACE_RATE_PER_MINUTE
+        value: "30"
       # The SPA is same-origin, so it needs no CORS grant. "*" is kept so the
       # browser/VS Code extensions can also reach this backend if pointed at it.
       - key: ALLOWED_ORIGINS

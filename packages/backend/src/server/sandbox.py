@@ -20,6 +20,7 @@ from __future__ import annotations
 import json
 import os
 import resource
+import signal
 import subprocess
 import sys
 import tempfile
@@ -203,18 +204,33 @@ def _run_sandbox(
     use_preexec = limit_setter is not None and os.name == "posix" and not config.use_docker_sandbox
     preexec = limit_setter if use_preexec else None
     base_timeout = timeout_override if timeout_override is not None else config.sandbox_timeout_seconds
+    # Put each non-container execution in its own process group. Without this,
+    # killing the tracer on timeout leaves user-spawned children running.
+    start_new_session = os.name == "posix" and not config.use_docker_sandbox
+    creationflags = 0
+    if os.name == "nt" and not config.use_docker_sandbox:
+        creationflags = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+
+    proc = subprocess.Popen(
+        cmd,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        preexec_fn=preexec,
+        env=child_env,
+        start_new_session=start_new_session,
+        creationflags=creationflags,
+    )
     try:
-        proc = subprocess.run(
-            cmd,
-            input=source,
-            capture_output=True,
-            text=True,
-            timeout=base_timeout + 1,
-            preexec_fn=preexec,
-            env=child_env,
-        )
+        stdout, stderr = proc.communicate(input=source, timeout=base_timeout + 1)
     except subprocess.TimeoutExpired:
+        _terminate_process_tree(proc)
+        proc.communicate()  # reap the direct child and drain its pipes
         return _timeout_trace(source, language, timeout_seconds=base_timeout)
+    # A submission may intentionally leave background children behind even
+    # when the tracer exits normally or is stopped by an rlimit.
+    _terminate_process_tree(proc)
 
     if proc.returncode != 0:
         return {
@@ -223,13 +239,13 @@ def _run_sandbox(
             "source": source,
             "stdin": stdin,
             "stdout": "",
-            "stderr": proc.stderr or f"sandbox exited with status {proc.returncode}",
-            "exit": {"status": "error", "message": proc.stderr.strip()[:500], "truncated": False},
+            "stderr": stderr or f"sandbox exited with status {proc.returncode}",
+            "exit": {"status": "error", "message": stderr.strip()[:500], "truncated": False},
             "events": [],
         }
 
     try:
-        return json.loads(proc.stdout)
+        return json.loads(stdout)
     except json.JSONDecodeError as e:
         return {
             "version": "0.1",
@@ -241,6 +257,20 @@ def _run_sandbox(
             "exit": {"status": "error", "message": str(e), "truncated": False},
             "events": [],
         }
+
+
+def _terminate_process_tree(proc: subprocess.Popen[str]) -> None:
+    """Best-effort termination of a timed-out tracer and its descendants."""
+    if os.name == "posix" and not config.use_docker_sandbox:
+        try:
+            os.killpg(proc.pid, signal.SIGKILL)
+            return
+        except ProcessLookupError:
+            return
+        except OSError:
+            pass
+    if proc.poll() is None:
+        proc.kill()
 
 
 def _docker_cmd(launcher: str) -> list[str]:

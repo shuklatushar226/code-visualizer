@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import os
+import shlex
+import time
 from dataclasses import replace
 
 import pytest
@@ -45,6 +48,33 @@ def test_timeout_returns_timeout_status(monkeypatch):
     assert res["exit"]["truncated"] is True
 
 
+@pytest.mark.skipif(os.name != "posix", reason="process-group regression is POSIX-specific")
+def test_timeout_kills_spawned_descendants(monkeypatch, tmp_path):
+    """A submission must not leave background processes after it ends."""
+    marker = tmp_path / "descendant-survived"
+    command = f"sleep 3; echo survived > {shlex.quote(str(marker))}"
+    source = (
+        "import subprocess\n"
+        f"subprocess.Popen(['/bin/sh', '-c', {command!r}])\n"
+        "while True: pass\n"
+    )
+    monkeypatch.setattr(
+        sandbox,
+        "config",
+        replace(
+            sandbox.config,
+            sandbox_timeout_seconds=1,
+            max_child_processes=0,
+            use_docker_sandbox=False,
+        ),
+    )
+
+    res = run_python_in_sandbox(source)
+    assert res["exit"]["status"] in {"timeout", "error"}
+    time.sleep(1.5)
+    assert not marker.exists(), "a child process survived the sandbox cleanup"
+
+
 def test_json_roundtrips():
     import json
 
@@ -85,21 +115,31 @@ def test_docker_cmd_has_required_security_flags():
 def test_docker_path_taken_when_use_docker_sandbox_set(monkeypatch):
     """Flipping the config flag routes the runner through docker. We don't
     actually invoke docker (it may not be installed); we intercept
-    subprocess.run and inspect what would have been called."""
+    subprocess.Popen and inspect what would have been called."""
     captured: dict = {}
 
-    def fake_run(cmd, **kwargs):
-        captured["cmd"] = cmd
-        # Return a fake successful trace.
-        import types
-        rv = types.SimpleNamespace()
-        rv.returncode = 0
-        rv.stdout = '{"version": "0.1", "language": "python", "source": "", "stdin": "", "stdout": "", "stderr": "", "exit": {"status": "ok", "message": null, "truncated": false}, "events": []}'
-        rv.stderr = ""
-        return rv
+    class FakePopen:
+        def __init__(self, cmd, **kwargs):
+            captured["cmd"] = cmd
+            self.pid = 12345
+            self.returncode = 0
+
+        def communicate(self, input=None, timeout=None):
+            return (
+                '{"version": "0.1", "language": "python", "source": "", '
+                '"stdin": "", "stdout": "", "stderr": "", "exit": '
+                '{"status": "ok", "message": null, "truncated": false}, "events": []}',
+                "",
+            )
+
+        def poll(self):
+            return self.returncode
+
+        def kill(self):
+            self.returncode = -9
 
     monkeypatch.setattr(sandbox, "config", replace(sandbox.config, use_docker_sandbox=True))
-    monkeypatch.setattr(sandbox.subprocess, "run", fake_run)
+    monkeypatch.setattr(sandbox.subprocess, "Popen", FakePopen)
     run_python_in_sandbox("x = 1")
     assert captured["cmd"][0] == "docker"
     assert "run" in captured["cmd"]

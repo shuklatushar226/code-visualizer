@@ -11,6 +11,8 @@ class Config:
     javascript_timeout_seconds: int = int(os.environ.get("JAVASCRIPT_TIMEOUT_SECONDS", "30"))
     max_trace_events: int = int(os.environ.get("MAX_TRACE_EVENTS", "5000"))
     max_child_processes: int = int(os.environ.get("MAX_CHILD_PROCESSES", "256"))
+    max_concurrent_traces: int = int(os.environ.get("MAX_CONCURRENT_TRACES", "2"))
+    trace_rate_per_minute: int = int(os.environ.get("TRACE_RATE_PER_MINUTE", "30"))
     allowed_origins: tuple[str, ...] = tuple(
         o.strip()
         for o in os.environ.get(

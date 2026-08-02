@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 from fastapi.testclient import TestClient
 
 from server.main import app
+from server.routes import trace as trace_route
 
 
 client = TestClient(app)
@@ -112,3 +115,39 @@ def test_explain_returns_501_without_api_key(monkeypatch):
     r = client.post("/explain", json={"event": {"line": 1}, "source": "x = 1"})
     assert r.status_code == 501
     assert "stretch-goal" in r.json()["detail"].lower() or "key" in r.json()["detail"].lower()
+
+
+def test_trace_rate_limit_returns_429(monkeypatch):
+    trace_route._TRACE_REQUESTS.clear()
+    monkeypatch.setattr(
+        trace_route,
+        "config",
+        replace(trace_route.config, trace_rate_per_minute=2),
+    )
+    monkeypatch.setattr(trace_route, "_dispatch_trace", lambda _req: {"ok": True})
+
+    payload = {"language": "python", "source": "x = 1", "stdin": ""}
+    assert client.post("/trace", json=payload).status_code == 200
+    assert client.post("/trace", json=payload).status_code == 200
+    limited = client.post("/trace", json=payload)
+    assert limited.status_code == 429
+    assert limited.headers["retry-after"] == "60"
+    trace_route._TRACE_REQUESTS.clear()
+
+
+def test_trace_capacity_returns_503(monkeypatch):
+    class BusySlots:
+        def acquire(self, blocking=False):
+            assert blocking is False
+            return False
+
+        def release(self):  # pragma: no cover - must not be called
+            raise AssertionError("unacquired slot was released")
+
+    monkeypatch.setattr(trace_route, "_TRACE_SLOTS", BusySlots())
+    response = client.post(
+        "/trace",
+        json={"language": "python", "source": "x = 1", "stdin": ""},
+    )
+    assert response.status_code == 503
+    assert response.headers["retry-after"] == "1"
