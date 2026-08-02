@@ -34,7 +34,9 @@ export default defineConfig({
       timeout: 30_000,
     },
     {
-      command: `npm run dev -- --port ${WEB_PORT}`,
+      // Exercise the optimized Rollup output, not Vite's dependency-deduping
+      // dev server. This catches production-only duplicate-React failures.
+      command: `npm run build && npm run preview -- --host 0.0.0.0 --port ${WEB_PORT}`,
       cwd: HERE,
       env: { VITE_API_URL: BACKEND_URL },
       url: WEB_URL,
