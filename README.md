@@ -1,8 +1,17 @@
-# DSA Code Visualizer
+# DSV · Code Visualizer
 
-A universal, line-by-line code visualizer aimed at students preparing for placements.
-Write code in Python or C++, see every step animated: variables changing, the call
-stack growing, linked lists rewiring, trees being traversed, heaps re-balancing.
+[![Live demo](https://img.shields.io/badge/Live_demo-Open_visualizer-d7ff49?style=for-the-badge&logo=render&logoColor=050605)](https://code-visualizer-pr4n.onrender.com/)
+[![CI](https://github.com/shuklatushar226/code-visualizer/actions/workflows/ci.yml/badge.svg)](https://github.com/shuklatushar226/code-visualizer/actions/workflows/ci.yml)
+[![MIT](https://img.shields.io/badge/license-MIT-55e8ff.svg)](LICENSE)
+
+![Code Visualizer preview](packages/web-app/public/og-v3.png)
+
+A polyglot, line-by-line runtime visualizer for understanding algorithms—not just
+running them. Paste Python, C++, or JavaScript and watch variables, call stacks,
+linked lists, trees, arrays, and recursion evolve one event at a time. A Java/JDI
+tracer is also included for local environments with JDK 17+.
+
+**[Try the deployed visualizer →](https://code-visualizer-pr4n.onrender.com/)**
 
 Designed to **attach to any editor or coding platform** — LeetCode, HackerRank,
 GeeksforGeeks, Codeforces, VS Code, or a standalone web app — through a shared
@@ -43,7 +52,7 @@ single visualizer panel can plug into many surfaces.
                      │
                      ▼
             ┌──────────────────────────────────────────┐
-            │      backend (FastAPI, sandboxed)        │
+            │ backend (FastAPI, isolated subprocesses) │
             │      POST /trace  →  trace JSON          │
             └────────┬─────────────────────────────────┘
                      │
@@ -84,13 +93,15 @@ code-visualizer/
 ├── examples/                  Sample DSA programs (Python & C++)
 └── packages/
     ├── trace-schema/          Shared JSON schema + TypeScript types
-    ├── tracer-python/         Python tracer (working MVP)
-    ├── tracer-cpp/            C++ tracer via GDB/MI (skeleton)
-    ├── backend/               FastAPI server that runs tracers in a sandbox
+    ├── tracer-python/         Python tracer via sys.settrace
+    ├── tracer-cpp/            C++ tracer via GDB/MI
+    ├── tracer-js/             JavaScript tracer via V8 Inspector
+    ├── tracer-java/           Java tracer via JDI (local JDK required)
+    ├── backend/               FastAPI execution and sharing API
     ├── visualizer-core/       React components: CodePane, ArrayView, TreeView…
     ├── web-app/               Standalone web app (paste code, see trace)
     ├── browser-extension/     Chrome MV3 extension with platform adapters
-    └── vscode-extension/      VS Code extension stub
+    └── vscode-extension/      VS Code webview integration
 ```
 
 ---
@@ -102,7 +113,7 @@ code-visualizer/
 ```bash
 # Backend (FastAPI on :8000)
 python3 -m venv .venv && source .venv/bin/activate
-pip install -e packages/tracer-python -e packages/tracer-cpp -e packages/tracer-java -e 'packages/backend[dev]'
+pip install -e packages/tracer-python -e packages/tracer-cpp -e packages/tracer-js -e packages/tracer-java -e 'packages/backend[dev]'
 uvicorn server.main:app --port 8000 --app-dir packages/backend/src &
 
 # Web app (Vite on :5173)
@@ -110,7 +121,8 @@ npm install
 npm run dev:web
 ```
 
-Open http://localhost:5173, paste Python, press **Run & Visualize**.
+Open http://localhost:5173 and press **Run & Visualize**. Example cards launch
+complete visual stories in one click.
 
 ### CLI
 
@@ -126,6 +138,7 @@ to any of the front-ends.
 ```bash
 npm test          # py + js unit suites (fast)
 npm run test:e2e  # Playwright e2e (slow, launches both servers)
+npm run lint      # ESLint + Ruff
 ```
 
 ---
@@ -145,16 +158,18 @@ See `docs/ROADMAP.md` for the full plan. Where things stand:
 * **M5 – Recursion tree view** ✅ — d3-hierarchy layout of call/return
   events, active-frame highlight
 
-**Quality floor**: 84 tests on `main` (42 pytest + 37 vitest + 5
-Playwright). GitHub Actions runs three job lanes (python matrix +
-node unit + e2e + extension bundles) on every push.
+**Quality floor**: 208 automated checks on this release — 119 passing pytest
+tests (plus 3 platform-gated skips), 78 Vitest tests, 8 real web journeys, and
+3 extension tests. GitHub Actions also builds and smoke-tests the same
+production container used by Render.
 
 **Stretch goals** (`docs/ROADMAP.md` "Stretch"):
-* Shareable links ✅ — `POST /share` + `GET /t/{code}` + UI button
+* Shareable links ✅ — SQLite-backed `POST /share` + `GET /t/{code}` + UI button;
+  set `SHARE_DB_PATH` to a mounted volume for persistence across redeploys
 * Diff view ✅ — `diffTraces(a, b)` walks two traces in lockstep,
   reports the first divergence
-* AI explainer — `POST /explain` route stub; wire `DSA_VIZ_AI_KEY` and a
-  provider to enable
+* AI explainer — streaming `POST /explain`; the UI enables it only when the
+  selected deployment reports a configured provider
 * Java tracer ✅ — `packages/tracer-java` drives the user's program through a
   JDI helper (`helper/dsaviz/Tracer.java`): line-by-line stepping, call stack,
   recursion, exceptions, arrays, user objects (ListNode/TreeNode → linked
@@ -162,9 +177,25 @@ node unit + e2e + extension bundles) on every push.
   17+ on PATH; the route returns 501 otherwise.
 * JS tracer — V8 Inspector driver in `packages/tracer-js`; needs `node` on PATH
 
-**Sandbox hardening**: `docs/SANDBOX.md` documents the production
-docker invocation; `packages/backend/Dockerfile.sandbox` and
-`sandbox.seccomp.json` are the production-ready artefacts.
+## Execution security
+
+The public Render demo uses an unprivileged subprocess boundary, process-group
+cleanup, timeouts, resource limits, admission limits, and per-client rate
+limits. It is appropriate for a controlled portfolio demo, but it is **not a
+hard multi-tenant sandbox**. `docs/SANDBOX.md` documents the stronger
+per-execution Docker/seccomp path and recommends gVisor or microVM isolation for
+hostile public workloads.
+
+## Engineering highlights
+
+* One versioned Trace Event Protocol connects four very different debugger
+  mechanisms to a single React renderer.
+* Content-aware views distinguish actual recursion from ordinary calls and
+  render object references as semantic labels instead of process-specific IDs.
+* Deployment capabilities are discovered at runtime, so the UI never presents
+  an unavailable compiler or AI provider as a working hosted feature.
+* Trace links use bounded, collision-safe SQLite storage and remain stable
+  across backend restarts.
 
 ---
 

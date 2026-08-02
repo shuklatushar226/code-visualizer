@@ -23,12 +23,9 @@ import resource
 import signal
 import subprocess
 import sys
-import tempfile
-from pathlib import Path
 from typing import Any, Callable, Dict
 
 from .config import config
-
 
 # The user's source code is piped over the child's stdin, so the user's
 # program stdin is delivered out-of-band: embedded into the launcher as a

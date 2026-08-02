@@ -29,6 +29,10 @@ services:
         value: "2"
       - key: TRACE_RATE_PER_MINUTE
         value: "30"
+      # SQLite makes links survive worker restarts. Point this at a mounted
+      # persistent disk on paid/production Render plans to survive redeploys.
+      - key: SHARE_DB_PATH
+        value: "/tmp/dsa-viz-shares.sqlite3"
       # The SPA is same-origin, so it needs no CORS grant. "*" is kept so the
       # browser/VS Code extensions can also reach this backend if pointed at it.
       - key: ALLOWED_ORIGINS

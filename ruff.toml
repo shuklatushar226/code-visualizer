@@ -1,0 +1,8 @@
+line-length = 120
+target-version = "py310"
+
+[lint]
+select = ["E", "F", "I"]
+
+[lint.per-file-ignores]
+"packages/*/tests/*.py" = ["E501"]

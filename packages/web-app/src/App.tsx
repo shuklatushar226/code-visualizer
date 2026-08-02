@@ -137,6 +137,12 @@ result = two_sum([2, 7, 11, 15], 9)
 
 type Lang = "python" | "cpp" | "javascript" | "java";
 type Mode = "single" | "compare";
+type Capability = { available: boolean; reason: string | null };
+type Capabilities = {
+  runtimes: Record<Lang, Capability>;
+  ai_explain: Capability;
+  isolation: "process" | "container";
+};
 
 const LANGUAGE_META: Record<Lang, { label: string; file: string; tone: string }> = {
   python: { label: "Python", file: "main.py", tone: "PY" },
@@ -168,9 +174,33 @@ export const App: React.FC = () => {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [capabilities, setCapabilities] = useState<Capabilities | null>(null);
+  const [capabilityError, setCapabilityError] = useState(false);
   const [explain, setExplain] = useState<boolean>(
     () => localStorage.getItem("dsaViz.explain") === "1",
   );
+
+  useEffect(() => {
+    let cancelled = false;
+    setCapabilityError(false);
+    void fetch(`${backend}/capabilities`)
+      .then(async (response) => {
+        if (!response.ok) throw new Error(`capabilities returned ${response.status}`);
+        return (await response.json()) as Capabilities;
+      })
+      .then((next) => {
+        if (!cancelled) setCapabilities(next);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setCapabilities(null);
+          setCapabilityError(true);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [backend]);
 
   useEffect(() => {
     const code = new URLSearchParams(location.search).get("t");
@@ -191,6 +221,7 @@ export const App: React.FC = () => {
   }, []);
 
   function onLanguageChange(next: Lang) {
+    if (capabilities && !capabilities.runtimes[next].available) return;
     setLanguage(next);
     // Swap in the new language's default ONLY if the editor still
     // contains one of the OTHER languages' defaults — preserves any
@@ -234,22 +265,20 @@ export const App: React.FC = () => {
     }
   }
 
-  function loadExample(nextSource: string, nextLanguage: Lang = "python") {
+  async function launchExample(nextSource: string, nextLanguage: Lang = "python") {
     setLanguage(nextLanguage);
     setSource(nextSource);
-    setTrace(null);
-    setErr(null);
-    setShareUrl(null);
+    await runProgram(nextSource, nextLanguage);
   }
 
-  async function run() {
+  async function runProgram(nextSource: string, nextLanguage: Lang) {
     setBusy(true);
     setErr(null);
     setTrace(null);
     setShareUrl(null);
     try {
       const client = traceClient(backend);
-      const t = await client.trace({ source, stdin, language });
+      const t = await client.trace({ source: nextSource, stdin, language: nextLanguage });
       setTrace(t);
     } catch (e) {
       setErr(String(e));
@@ -257,6 +286,15 @@ export const App: React.FC = () => {
       setBusy(false);
     }
   }
+
+  async function run() {
+    await runProgram(source, language);
+  }
+
+  const availableRuntimeCount = capabilities
+    ? Object.values(capabilities.runtimes).filter((runtime) => runtime.available).length
+    : null;
+  const aiAvailable = capabilities?.ai_explain.available ?? false;
 
   async function compare() {
     setBusy(true);
@@ -328,7 +366,9 @@ export const App: React.FC = () => {
           </div>
 
           <div className="header-actions">
-            <span className="engine-status"><i /> Engine live</span>
+            <span className={capabilityError ? "engine-status is-warning" : "engine-status"}>
+              <i /> {capabilityError ? "Engine status unknown" : "Engine live"}
+            </span>
             <label className="mode-control">
               <span className="control-label">Workspace</span>
               <select value={mode} onChange={(e) => onModeChange(e.target.value as Mode)}>
@@ -340,6 +380,8 @@ export const App: React.FC = () => {
               <input
                 type="checkbox"
                 checked={explain}
+                disabled={!aiAvailable}
+                title={capabilities?.ai_explain.reason ?? "Checking AI availability"}
                 onChange={(e) => {
                   setExplain(e.target.checked);
                   try {
@@ -350,7 +392,7 @@ export const App: React.FC = () => {
                 }}
               />
               <span className="toggle-track" aria-hidden="true"><i /></span>
-              AI explain
+              AI explain{capabilities && !aiAvailable ? " · unavailable" : ""}
             </label>
             <details className="settings-menu">
               <summary aria-label="Backend settings">•••</summary>
@@ -411,10 +453,15 @@ export const App: React.FC = () => {
                   value={language}
                   onChange={(e) => onLanguageChange(e.target.value as Lang)}
                 >
-                  <option value="python">Python</option>
-                  <option value="cpp">C++</option>
-                  <option value="javascript">JavaScript</option>
-                  <option value="java">Java</option>
+                  {(Object.keys(LANGUAGE_META) as Lang[]).map((lang) => {
+                    const runtime = capabilities?.runtimes[lang];
+                    return (
+                      <option key={lang} value={lang} disabled={runtime?.available === false}>
+                        {LANGUAGE_META[lang].label}
+                        {runtime?.available === false ? " — unavailable here" : ""}
+                      </option>
+                    );
+                  })}
                 </select>
               </label>
               <label className="stdin">
@@ -434,7 +481,7 @@ export const App: React.FC = () => {
                 className="share-button"
                 onClick={share}
                 disabled={!trace}
-                title="Save and copy a shareable link (ephemeral: lost on backend restart)"
+                title="Save this trace and copy a share link"
               >
                 Share
               </button>
@@ -443,6 +490,21 @@ export const App: React.FC = () => {
                   copied ✓
                 </a>
               )}
+            </div>
+            <div className="runtime-strip" aria-label="Runtime availability">
+              {(Object.keys(LANGUAGE_META) as Lang[]).map((lang) => {
+                const runtime = capabilities?.runtimes[lang];
+                return (
+                  <span
+                    key={lang}
+                    className={runtime?.available === false ? "is-offline" : ""}
+                    title={runtime?.reason ?? `${LANGUAGE_META[lang].label} runtime ready`}
+                  >
+                    <i /> {LANGUAGE_META[lang].label}
+                    {runtime?.available === false ? " · local only" : ""}
+                  </span>
+                );
+              })}
             </div>
             <textarea
               className="editor-textarea"
@@ -494,7 +556,7 @@ export const App: React.FC = () => {
                     you can pause, scrub and understand.
                   </p>
                   <div className="proof-strip" aria-label="Visualizer capabilities">
-                    <span><b>4</b> runtimes</span>
+                    <span><b>{availableRuntimeCount ?? "…"}</b> live runtimes</span>
                     <span><b>∞</b> states</span>
                     <span><b>1</b> clear story</span>
                   </div>
@@ -506,17 +568,17 @@ export const App: React.FC = () => {
                   <div className="example-launcher">
                     <span className="launcher-label">Or launch a visual story</span>
                     <div className="example-grid">
-                      <button onClick={() => loadExample(DEFAULT_PYTHON)}>
+                      <button onClick={() => void launchExample(DEFAULT_PYTHON)} disabled={busy}>
                         <i className="example-icon linked-icon"><span /><span /><span /></i>
                         <span><strong>Reverse a list</strong><small>Pointers in motion</small></span>
                         <b>↗</b>
                       </button>
-                      <button onClick={() => loadExample(BINARY_SEARCH_EXAMPLE)}>
+                      <button onClick={() => void launchExample(BINARY_SEARCH_EXAMPLE)} disabled={busy}>
                         <i className="example-icon search-icon"><span /></i>
                         <span><strong>Binary search</strong><small>Watch the window shrink</small></span>
                         <b>↗</b>
                       </button>
-                      <button onClick={() => loadExample(TWO_SUM_EXAMPLE)}>
+                      <button onClick={() => void launchExample(TWO_SUM_EXAMPLE)} disabled={busy}>
                         <i className="example-icon hash-icon">#</i>
                         <span><strong>Two sum</strong><small>Build a hash map live</small></span>
                         <b>↗</b>
@@ -527,11 +589,22 @@ export const App: React.FC = () => {
               </div>
             )}
             {trace && (
-              <VisualizerPanel
-                trace={trace}
-                showExplainer={explain}
-                explainerBackend={backend}
-              />
+              <>
+                <div className="trace-guide" aria-label="How to read the trace">
+                  <span><b>1</b> Active line</span>
+                  <i />
+                  <span><b>2</b> Locals & calls</span>
+                  <i />
+                  <span><b>3</b> Data structure</span>
+                  <i />
+                  <span><b>4</b> Scrub time</span>
+                </div>
+                <VisualizerPanel
+                  trace={trace}
+                  showExplainer={explain && aiAvailable}
+                  explainerBackend={backend}
+                />
+              </>
             )}
           </section>
         </div>
@@ -549,10 +622,16 @@ export const App: React.FC = () => {
                   value={language}
                   onChange={(e) => onLanguageChange(e.target.value as Lang)}
                 >
-                  <option value="python">Python</option>
-                  <option value="cpp">C++</option>
-                  <option value="javascript">JavaScript</option>
-                  <option value="java">Java</option>
+                  {(Object.keys(LANGUAGE_META) as Lang[]).map((lang) => (
+                    <option
+                      key={lang}
+                      value={lang}
+                      disabled={capabilities?.runtimes[lang].available === false}
+                    >
+                      {LANGUAGE_META[lang].label}
+                      {capabilities?.runtimes[lang].available === false ? " — unavailable here" : ""}
+                    </option>
+                  ))}
                 </select>
               </label>
               <button className="run-button" onClick={compare} disabled={busy}>

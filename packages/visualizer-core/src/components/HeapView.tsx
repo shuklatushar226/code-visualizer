@@ -1,7 +1,6 @@
 import React from "react";
 import type { Frame, HeapObject } from "@dsa-viz/trace-schema";
 import { detectStructure } from "../lib/detectStructure";
-import type { PatternKind } from "../lib/patterns";
 import { ArrayView, type ArrayOverlay } from "./structures/ArrayView";
 import { LinkedListView } from "./structures/LinkedListView";
 import { TreeView } from "./structures/TreeView";

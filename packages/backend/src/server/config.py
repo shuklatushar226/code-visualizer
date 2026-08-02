@@ -24,6 +24,13 @@ class Config:
     # Hard limit on the size of a submission to guard against DoS.
     max_source_bytes: int = int(os.environ.get("MAX_SOURCE_BYTES", "65536"))
 
+    # SQLite keeps shared traces across backend process restarts. Hosted
+    # deployments can point this at a persistent disk; local/default runs use
+    # /tmp so the source tree is never dirtied by application state.
+    share_db_path: str = os.environ.get(
+        "SHARE_DB_PATH", "/tmp/dsa-viz-shares.sqlite3"
+    )
+
     # Production-grade container sandbox. When enabled, each /trace request
     # spawns `docker run` instead of a same-process subprocess. The image is
     # built from packages/backend/Dockerfile.sandbox.

@@ -1,5 +1,5 @@
 import type { Trace, TraceEvent } from "@dsa-viz/trace-schema";
-import type { PatternHit, PatternKind } from "./types";
+import type { PatternHit } from "./types";
 import { detectSlidingWindow } from "./slidingWindow";
 import { detectTwoPointer } from "./twoPointer";
 import { detectBinarySearch } from "./binarySearch";

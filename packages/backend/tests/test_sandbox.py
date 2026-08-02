@@ -8,7 +8,6 @@ import time
 from dataclasses import replace
 
 import pytest
-
 from server import sandbox
 from server.sandbox import run_python_in_sandbox
 

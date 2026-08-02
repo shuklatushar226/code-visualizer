@@ -6,16 +6,11 @@ key is needed and no real network call happens.
 """
 from __future__ import annotations
 
-import os
-from typing import AsyncIterator
-
 import pytest
 from fastapi.testclient import TestClient
-
 from server import ai
 from server.main import app
 from server.routes import explain as explain_route
-
 
 client = TestClient(app)
 
