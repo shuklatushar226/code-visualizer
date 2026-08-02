@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { Frame, TraceEvent, Value } from "@dsa-viz/trace-schema";
+import type { Frame, Heap, TraceEvent, Value } from "@dsa-viz/trace-schema";
 import {
   buildRecursionTree,
   countCalls,
@@ -150,10 +150,16 @@ describe("formatArgValue", () => {
     expect(formatArgValue({ kind: "none" })).toBe("None");
   });
 
-  it("shortens heap refs to the last 4 digits with an arrow", () => {
-    expect(formatArgValue({ kind: "ref", id: "h_4344566304" })).toBe("→6304");
-    // Even for short ids the arrow + last-up-to-4 holds.
-    expect(formatArgValue({ kind: "ref", id: "h_7" })).toBe("→7");
+  it("resolves heap refs to semantic object labels", () => {
+    const heap: Heap = {
+      h_4344566304: {
+        kind: "object",
+        type: "Node",
+        fields: { val: { kind: "int", v: 4 }, next: { kind: "none" } },
+      },
+    };
+    expect(formatArgValue({ kind: "ref", id: "h_4344566304" }, heap)).toBe("→Node(4)");
+    expect(formatArgValue({ kind: "ref", id: "h_missing" }, heap)).toBe("→reference");
   });
 
   it("truncates long strings with an ellipsis", () => {
@@ -177,8 +183,15 @@ describe("formatArgs", () => {
     expect(formatArgs({ n: num(6) })).toBe("n=6");
   });
 
-  it("shortens ref args to the last-4 form", () => {
-    expect(formatArgs({ head: ref("h_4344566304") })).toBe("head=→6304");
+  it("shows the linked-list head value instead of a runtime id", () => {
+    const heap: Heap = {
+      h_head: {
+        kind: "object",
+        type: "Node",
+        fields: { val: num(1), next: { kind: "none" } },
+      },
+    };
+    expect(formatArgs({ head: ref("h_head") }, heap)).toBe("head=→Node(1)");
   });
 
   it("caps the joined label at 32 chars with a trailing ellipsis", () => {

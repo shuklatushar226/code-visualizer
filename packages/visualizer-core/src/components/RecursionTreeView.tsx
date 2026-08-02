@@ -76,16 +76,16 @@ export const RecursionTreeView: React.FC<RecursionTreeViewProps> = ({
       ))}
       {nodes.map((node) => {
         const isActive = node.data.id === activeId;
-        const argsLabel = formatArgs(node.data.args);
-        const tooltip = `${node.data.func}(${formatArgsVerbose(node.data.args)})`;
+        const argsLabel = formatArgs(node.data.args, node.data.heap);
+        const tooltip = `${node.data.func}(${formatArgsVerbose(node.data.args, node.data.heap)})`;
         return (
           <g
             key={node.data.id}
             transform={`translate(${node.x}, ${node.y})`}
             className={`dsa-viz-recursion-node${isActive ? " is-active" : ""}`}
           >
-            {/* Native browser tooltip — hovering a node reveals the full
-                args including self= and full pointer ids. */}
+            {/* Native browser tooltip — hovering a node reveals the full args,
+                including self, with references resolved semantically. */}
             <title>{tooltip}</title>
             <rect x={-NODE_W / 2} y={-NODE_H / 2} width={NODE_W} height={NODE_H} rx={6} />
             <text className="dsa-viz-recursion-func" textAnchor="middle" y={-2}>

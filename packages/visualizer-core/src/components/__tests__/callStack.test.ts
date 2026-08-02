@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { HeapObject, Value } from "@dsa-viz/trace-schema";
-import { describeReference } from "../CallStack";
+import { describeReference } from "../../lib/describeReference";
 
 const ref = (id: string): Extract<Value, { kind: "ref" }> => ({ kind: "ref", id });
 

@@ -1,9 +1,12 @@
-import type { Frame, TraceEvent, Value } from "@dsa-viz/trace-schema";
+import type { Frame, Heap, TraceEvent, Value } from "@dsa-viz/trace-schema";
+import { describeReference } from "./describeReference";
 
 export interface CallNode {
   id: string;
   func: string;
   args: Record<string, Value>;
+  /** Heap snapshot from the call event, used to resolve pointer arguments. */
+  heap: Heap;
   startEvent: number;
   endEvent?: number;
   children: CallNode[];
@@ -32,6 +35,7 @@ export function buildRecursionTree(events: TraceEvent[], opts: BuildOptions = {}
     id: "root",
     func: "<root>",
     args: {},
+    heap: {},
     startEvent: 0,
     children: [],
   };
@@ -55,6 +59,7 @@ export function buildRecursionTree(events: TraceEvent[], opts: BuildOptions = {}
             id: `n_truncated_${counter++}`,
             func: "+more",
             args: {},
+            heap: ev.heap,
             startEvent: i,
             endEvent: i,
             children: [],
@@ -63,13 +68,22 @@ export function buildRecursionTree(events: TraceEvent[], opts: BuildOptions = {}
           truncated.add(parent);
         }
         // Push a placeholder so depth tracking continues to work for matching returns.
-        open.push({ id: "placeholder", func: "", args: {}, startEvent: i, children: [], truncated: true });
+        open.push({
+          id: "placeholder",
+          func: "",
+          args: {},
+          heap: ev.heap,
+          startEvent: i,
+          children: [],
+          truncated: true,
+        });
         return;
       }
       const node: CallNode = {
         id: `n_${counter++}`,
         func: top.func,
         args: pickArgs(top),
+        heap: ev.heap,
         startEvent: i,
         children: [],
       };
@@ -124,13 +138,11 @@ export function findActiveCall(
 /**
  * Render one Value for display on a recursion-tree node label.
  *
- * - Heap refs collapse to `→<last-4-digits>` so the args line stays scannable
- *   without burning 12+ chars per pointer. The reader can cross-reference the
- *   last-4 tag with the Heap view when they care about identity.
+ * - Heap refs resolve to semantic labels such as `→Node(4)` or `→list[3]`.
  * - Strings are JSON-escaped and capped at 14 visible chars.
  * - All other primitives render as their Python-style literal.
  */
-export function formatArgValue(v: Value): string {
+export function formatArgValue(v: Value, heap: Heap = {}): string {
   switch (v.kind) {
     case "int":
     case "float":
@@ -143,10 +155,8 @@ export function formatArgValue(v: Value): string {
     }
     case "none":
       return "None";
-    case "ref": {
-      const tail = v.id.replace(/^h_/, "").slice(-4);
-      return `→${tail}`;
-    }
+    case "ref":
+      return `→${describeReference(v, heap)}`;
   }
 }
 
@@ -160,11 +170,11 @@ export function formatArgValue(v: Value): string {
  * - Caps the joined label at 32 chars with a trailing ellipsis. The component
  *   pairs this with a `<title>` tooltip that always shows the full args.
  */
-export function formatArgs(args: Record<string, Value>): string {
+export function formatArgs(args: Record<string, Value>, heap: Heap = {}): string {
   const parts: string[] = [];
   for (const [k, v] of Object.entries(args)) {
     if (k === "self") continue;
-    parts.push(`${k}=${formatArgValue(v)}`);
+    parts.push(`${k}=${formatArgValue(v, heap)}`);
   }
   const joined = parts.join(", ");
   const CAP = 32;
@@ -173,10 +183,10 @@ export function formatArgs(args: Record<string, Value>): string {
 
 /** Verbose args label used by the SVG `<title>` tooltip — no truncation,
  *  includes `self` so power users can correlate the full picture. */
-export function formatArgsVerbose(args: Record<string, Value>): string {
+export function formatArgsVerbose(args: Record<string, Value>, heap: Heap = {}): string {
   const parts: string[] = [];
   for (const [k, v] of Object.entries(args)) {
-    parts.push(`${k}=${formatArgValue(v)}`);
+    parts.push(`${k}=${formatArgValue(v, heap)}`);
   }
   return parts.join(", ");
 }
