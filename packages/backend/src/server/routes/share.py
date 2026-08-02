@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import threading
 from typing import Any, Dict
 
 from fastapi import APIRouter, HTTPException
@@ -20,8 +21,10 @@ router = APIRouter()
 
 # Process-local store. Bounded so a misbehaving caller can't OOM the host.
 _MAX_ENTRIES = 1000
+_MAX_TRACE_BYTES = 1_000_000
 _STORE: Dict[str, Dict[str, Any]] = {}
 _ORDER: list[str] = []  # insertion order for LRU-style eviction
+_STORE_LOCK = threading.RLock()
 
 
 class SavePayload(BaseModel):
@@ -48,18 +51,32 @@ def _make_code(trace: Dict[str, Any]) -> str:
 @router.post("/share")
 def save_trace(payload: SavePayload):
     """Persist a trace and return its short code."""
-    code = _make_code(payload.trace)
-    _STORE[code] = payload.trace
-    _ORDER.append(code)
-    while len(_ORDER) > _MAX_ENTRIES:
-        evict = _ORDER.pop(0)
-        _STORE.pop(evict, None)
+    encoded = json.dumps(payload.trace, sort_keys=True, separators=(",", ":")).encode()
+    if len(encoded) > _MAX_TRACE_BYTES:
+        raise HTTPException(status_code=413, detail="trace is too large to share")
+
+    with _STORE_LOCK:
+        code = _make_code(payload.trace)
+        already_stored = code in _STORE
+        _STORE[code] = payload.trace
+        if already_stored:
+            # Refresh the existing entry instead of adding duplicate order
+            # records that eventually evict the only stored copy.
+            try:
+                _ORDER.remove(code)
+            except ValueError:
+                pass
+        _ORDER.append(code)
+        while len(_ORDER) > _MAX_ENTRIES:
+            evict = _ORDER.pop(0)
+            _STORE.pop(evict, None)
     return {"code": code, "url": f"/t/{code}"}
 
 
 @router.get("/t/{code}")
 def fetch_trace(code: str):
-    trace = _STORE.get(code)
+    with _STORE_LOCK:
+        trace = _STORE.get(code)
     if trace is None:
         raise HTTPException(status_code=404, detail=f"No trace with code {code!r}")
     return trace

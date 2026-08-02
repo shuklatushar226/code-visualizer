@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import shutil
+import threading
+import time
+from collections import deque
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from ..config import config
@@ -17,6 +20,37 @@ from ..sandbox import (
 
 router = APIRouter()
 
+_TRACE_SLOTS = threading.BoundedSemaphore(max(1, config.max_concurrent_traces))
+_TRACE_RATE_LOCK = threading.Lock()
+_TRACE_REQUESTS: dict[str, deque[float]] = {}
+_TRACE_CLIENTS_MAX = 10_000
+
+
+def _allow_trace(ip: str) -> bool:
+    """Fixed-window per-client limiter for expensive execution requests."""
+    limit = config.trace_rate_per_minute
+    if limit <= 0:
+        return True
+    now = time.monotonic()
+    cutoff = now - 60.0
+    with _TRACE_RATE_LOCK:
+        history = _TRACE_REQUESTS.setdefault(ip, deque())
+        while history and history[0] <= cutoff:
+            history.popleft()
+        if len(history) >= limit:
+            return False
+        history.append(now)
+
+        if len(_TRACE_REQUESTS) > _TRACE_CLIENTS_MAX:
+            stale = [
+                client
+                for client, requests in _TRACE_REQUESTS.items()
+                if not requests or requests[-1] <= cutoff
+            ]
+            for client in stale:
+                _TRACE_REQUESTS.pop(client, None)
+        return True
+
 
 class TraceRequest(BaseModel):
     language: str = Field(..., description="One of: python, cpp, javascript, java")
@@ -25,7 +59,7 @@ class TraceRequest(BaseModel):
 
 
 @router.post("/trace")
-def trace(req: TraceRequest):
+def trace(req: TraceRequest, request: Request):
     # Reject oversize sources with a clean 413 rather than letting the sandbox
     # raise a bare ValueError (which would surface as a generic 500).
     if len(req.source.encode("utf-8")) > config.max_source_bytes:
@@ -33,6 +67,26 @@ def trace(req: TraceRequest):
             status_code=413,
             detail=f"source exceeds the maximum of {config.max_source_bytes} bytes",
         )
+    if not _TRACE_SLOTS.acquire(blocking=False):
+        raise HTTPException(
+            status_code=503,
+            detail="trace capacity is busy; retry shortly",
+            headers={"Retry-After": "1"},
+        )
+    try:
+        ip = request.client.host if request.client else "unknown"
+        if not _allow_trace(ip):
+            raise HTTPException(
+                status_code=429,
+                detail="trace rate limit exceeded",
+                headers={"Retry-After": "60"},
+            )
+        return _dispatch_trace(req)
+    finally:
+        _TRACE_SLOTS.release()
+
+
+def _dispatch_trace(req: TraceRequest):
     if req.language == "python":
         return run_python_in_sandbox(req.source, req.stdin)
     if req.language == "cpp":

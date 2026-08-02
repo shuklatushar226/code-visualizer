@@ -5,8 +5,11 @@ hands the source to a sandboxed subprocess that produces a Trace Event
 Protocol JSON document on stdout. Three layers of defence stack:
 
 1. **Process boundary**: subprocess with a wall-clock timeout in the
-   parent. The tracer-python and tracer-cpp packages know nothing about
-   the server's HTTP layer, so a tracer crash can't escape the worker.
+   parent. Each non-container invocation gets a dedicated process group;
+   the parent kills the entire group after completion or timeout so submitted
+   code cannot leave background descendants running. The tracer packages know
+   nothing about the server's HTTP layer, so a tracer crash can't escape the
+   worker.
 
 2. **POSIX rlimits**: `setrlimit(RLIMIT_CPU, ...)`, `RLIMIT_AS`,
    `RLIMIT_FSIZE`, `RLIMIT_NPROC`, `RLIMIT_CORE`. Applied via
@@ -73,17 +76,19 @@ docker run --runtime=runsc <other flags> dsa-viz-sandbox ...
 
 - **Side-channels** (timing, cache). Don't run latency-sensitive
   workloads on the same host.
-- **Resource exhaustion via many tiny requests**. Apply rate limiting
-  at the HTTP layer.
+- **Distributed resource exhaustion**. The API rejects work above
+  `MAX_CONCURRENT_TRACES` and limits each client address to
+  `TRACE_RATE_PER_MINUTE`, but a reverse proxy or edge service should enforce
+  broader distributed limits when the backend runs on multiple instances.
 - **Container-escape 0-days**. gVisor is the answer; alternatively
   Firecracker microVMs.
 
 ## Verifying the boundary
 
 `packages/backend/tests/test_sandbox.py` covers the in-process layer:
-timeouts, runtime errors, compile errors, source-size guards. Add new
-adversarial sources to that file when you discover an escape (and fix
-the escape first).
+timeouts, descendant cleanup, runtime errors, compile errors, and source-size
+guards. Route tests cover capacity and per-client admission limits. Add new
+adversarial sources when you discover an escape (and fix the escape first).
 
 For Docker-based testing, the smoke script you can run locally:
 
