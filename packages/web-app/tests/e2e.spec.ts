@@ -13,6 +13,13 @@ test("runs the default Python program and produces a trace", async ({ page }) =>
   const initial = await tCounter.textContent();
   expect(initial).toMatch(/^t = 0 \/ \d+/);
 
+  // Recursion arguments must explain what pointers reference instead of
+  // exposing process-specific Python ids such as next=→4960.
+  const recursionView = page.locator(".dsa-viz-recursion");
+  await expect(recursionView).toContainText("next=→Node(4)");
+  await expect(recursionView).toContainText("head=→Node(1)");
+  await expect(recursionView).not.toContainText(/→\d{4}/);
+
   // Seek to the final event via the range slider.
   const slider = page.locator('input[type="range"]');
   const max = await slider.evaluate((el: HTMLInputElement) => Number(el.max));
