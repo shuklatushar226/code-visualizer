@@ -76,7 +76,7 @@ export const VisualizerPanel: React.FC<VisualizerPanelProps> = ({
           />
         </div>
         <div className="dsa-viz-stackcol">
-          <CallStack frames={event?.stack ?? []} />
+          <CallStack frames={event?.stack ?? []} heap={event?.heap ?? {}} />
         </div>
       </div>
       <div className="dsa-viz-tabs" role="tablist">
