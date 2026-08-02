@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import type { Frame, Trace } from "@dsa-viz/trace-schema";
 import { usePlayback } from "../hooks/usePlayback";
 import {
@@ -12,6 +12,7 @@ import { CallStack } from "./CallStack";
 import { Explainer } from "./Explainer";
 import { HeapView, type PatternOverlayState } from "./HeapView";
 import { RecursionTreeView } from "./RecursionTreeView";
+import { hasRecursiveCalls } from "../lib/recursionTree";
 
 export interface VisualizerPanelProps {
   trace: Trace;
@@ -39,8 +40,6 @@ export interface VisualizerPanelProps {
  *   │ ControlBar  ⏮  ⏯  ⏭   speed   t = 17 / 134               │
  *   └──────────────────────────────────────────────────────────┘
  */
-const RECURSION_TAB_THRESHOLD = 5;
-
 export const VisualizerPanel: React.FC<VisualizerPanelProps> = ({
   trace,
   initialT = 0,
@@ -55,9 +54,16 @@ export const VisualizerPanel: React.FC<VisualizerPanelProps> = ({
     () => trace.events.reduce((acc, e) => acc + (e.kind === "call" ? 1 : 0), 0),
     [trace.events],
   );
+  const preferRecursion = useMemo(() => hasRecursiveCalls(trace.events), [trace.events]);
   const [view, setView] = useState<"heap" | "recursion">(
-    callCount > RECURSION_TAB_THRESHOLD ? "recursion" : "heap",
+    preferRecursion ? "recursion" : "heap",
   );
+
+  // A new trace may represent a completely different algorithm. Reapply the
+  // content-aware default without fighting manual tab changes during playback.
+  useEffect(() => {
+    setView(preferRecursion ? "recursion" : "heap");
+  }, [trace, preferRecursion]);
 
   const patternHits = useMemo(() => detectPatterns(trace), [trace]);
   const overlay = useMemo(
