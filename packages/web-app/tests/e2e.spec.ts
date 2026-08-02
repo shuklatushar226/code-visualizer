@@ -27,6 +27,13 @@ test("runs the default Python program and produces a trace", async ({ page }) =>
   // Wait for React to commit the new t.
   await expect(tCounter).toHaveText(new RegExp(`^t = ${max} / ${max}$`));
 
+  // Object locals should be meaningful to learners. Python's process-specific
+  // `id()` values remain available in a tooltip, but must not be the visible
+  // label in the call stack.
+  const callStack = page.locator(".dsa-viz-callstack");
+  await expect(callStack).toContainText("Node(4)");
+  await expect(callStack).not.toContainText(/h_\d+/);
+
   // The linked-list demo has 6 calls (4x Node.__init__ + reverse + <module>),
   // so the Recursion tab auto-selects. Switch to Heap to find list views.
   await page.locator(".dsa-viz-tabs button", { hasText: "Heap" }).click();
